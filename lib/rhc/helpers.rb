@@ -21,6 +21,11 @@ module RHC
 
     extend self
 
+    global_option '--debug', "Write debug output"
+    def debugging?
+      options.debug
+    end
+
     def decode_json(s)
       RHC::Vendor::OkJson.decode(s)
     end
@@ -37,6 +42,47 @@ module RHC
     def datetime_rfc3339(s)
       DateTime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
       # Replace with d = DateTime.rfc3339(s)
+    end
+
+    def timed(&block)
+      start = Time.now.to_f
+      yield
+      end_time = Time.now.to_f
+      end_time - start
+    end
+
+
+    #
+    # Git command helpers
+    #
+
+    def git(command, mode=:output)
+      out = %x{ git #{command} 2>&1 }.strip
+      say "git(#{$?.to_i}): #{out}" if debugging?
+      return $?.to_i == 0 if mode == :succeeds
+      return $? if mode == :exit_code
+      say out and return $?.to_i == 0 if mode == :show
+      raise "git #{command} did not succeed: #{$?.to_i}\n#{out}" if $?.to_i != 0
+      out
+    end
+
+    def git_branch
+      git('symbolic-ref HEAD').match(%r{\Arefs/heads/(.*)$})[1]
+    end
+
+    def from_git_root(&block)
+      dir = git('rev-parse --show-cdup')
+      if dir.empty?
+        yield
+      else
+        Dir.chdir(dir, &block)
+      end
+    end
+
+    def require_clean_git_dir!
+      unless git('diff --quiet', :succeeds)
+        raise "You have unsaved changes in your git repo #{`pwd`}.  Commit or revert your changes to run this command." 
+      end
     end
 
 
