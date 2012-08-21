@@ -17,7 +17,7 @@ describe RHC::CLI do
     end
 
     context 'with help and invalid command' do
-      let(:arguments) { ['invalidcommand', 'help'] }
+      let(:arguments) { ['invalidcommand', '--help'] }
       it { expect { run }.should exit_with_code(1) }
     end
 

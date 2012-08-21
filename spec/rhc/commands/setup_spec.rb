@@ -35,7 +35,7 @@ describe RHC::Commands::Setup do
   end
 
   describe 'help' do
-    let(:arguments) { ['setup', 'help'] }
+    let(:arguments) { ['setup', '--help'] }
 
     context 'help is run' do
       it "should display help" do
