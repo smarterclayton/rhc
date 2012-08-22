@@ -4,7 +4,7 @@ module RHC::Commands
   class Domain < Base
     summary "Manage your domain"
     syntax "<action>"
-    default_action :list
+    default_action :show
 
     summary "Bind a registered user to a domain"
     syntax "<namespace> [--timeout timeout]"
@@ -47,13 +47,10 @@ module RHC::Commands
       0
     end
 
-    summary "List the applications in your domain"
-    alias_action :show
-    def list
-      domains = rest_client.domains
-      say "No domain exists.  You can use 'rhc domain create' to create a namespace for applications." if domains.empty?
-
-      domains.each do |domain|
+    summary "Display the applications in your domain"
+    def show
+      domain = rest_client.domains.first
+      if domain
         paragraph do
           say "Applications in #{domain.id}:"
           apps = domain.applications
@@ -84,6 +81,8 @@ module RHC::Commands
             end
           end
         end
+      else
+        say "No domain exists.  You can use 'rhc domain create' to create a namespace for applications." unless domain
       end
       0
     end

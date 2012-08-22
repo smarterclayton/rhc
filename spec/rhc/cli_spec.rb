@@ -12,7 +12,7 @@ describe RHC::CLI do
   shared_examples_for 'an invalid command' do
     let(:arguments) { @arguments }
     it('should contain the invalid command message') { run_output.should =~ /is not recognized/ }
-    it('should contain the arguments') { run_output.should include(@arguments.join(' ')) }
+    it('should contain the arguments') { run_output.should include(@arguments[0]) }
     it('should reference --help') { run_output.should =~ / help\b/ }
   end
 

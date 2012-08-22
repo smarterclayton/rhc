@@ -22,8 +22,13 @@ class RHC::Commands::Base
 
     attr_reader :args, :options
 
+    #
+    # The implicit config object provides no defaults.
+    #
     def config
-      @config ||= RHC::Config
+      @config ||= begin
+        RHC::Config.new
+      end
     end
 
     def application

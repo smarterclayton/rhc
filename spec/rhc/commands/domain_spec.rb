@@ -9,7 +9,7 @@ describe RHC::Commands::Domain do
   end
 
   describe 'default action' do
-    let(:arguments) { ['domain', 'list', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
+    let(:arguments) { ['domain', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
 
     context 'when run with no domains' do
       before(:each) do
@@ -20,8 +20,8 @@ describe RHC::Commands::Domain do
     end
   end
 
-  describe 'list' do
-    let(:arguments) { ['domain', 'list', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
+  describe 'show' do
+    let(:arguments) { ['domain', 'show', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
 
     context 'when run with no domains' do
       before(:each) do
@@ -54,7 +54,7 @@ describe RHC::Commands::Domain do
       it "should match output" do
         output = run_output
         output.should match("Applications in firstdomain\:")
-        output.should match("Applications in seconddomain\:")
+        output.should_not match("Applications in seconddomain\:")
       end
     end
 

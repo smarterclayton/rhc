@@ -10,8 +10,10 @@ module RHC
     def run!
       trace = false
       require_program :version, :description
+
       trap('INT') { abort program(:int_message) } if program(:int_message)
       trap('INT') { program(:int_block).call } if program(:int_block)
+
       global_option('-h', '--help', 'Display help documentation') do
         args = @args - %w[-h --help]
         command(:help).run(*args)
@@ -19,6 +21,7 @@ module RHC
       end
       global_option('-v', '--version', 'Display version information') { say version; return }
       global_option('-t', '--trace', 'Display backtrace when an error occurs') { trace = true }
+
       parse_global_options
       remove_global_options options, @args
 
@@ -59,7 +62,7 @@ module RHC
 
     def global_option(*args, &block)
       opts = args.pop if Hash === args.last
-      super.tap do |options|
+      super(*args, &block).tap do |options|
         options.last.merge!(opts) if opts
       end
     end
@@ -76,7 +79,9 @@ module RHC
             begin
               require_valid_command command
             rescue InvalidCommandError => e
-              abort "#{e}"
+              RHC::Helpers.error "The command '#{program :name} #{provided_arguments.join(' ')}' is not recognized.\n"
+              say "See '#{program :name} help' for a list of valid commands."
+              next
             end
 
             help_bindings = CommandHelpBindings.new command, commands, Commander::Runner.instance.options

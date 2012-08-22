@@ -32,17 +32,17 @@ module RHC
       RHC::Config.set_opts_config(options.config) if options.config
       RHC::Config.password = options.password if options.password
       RHC::Config.opts_login = options.rhlogin if options.rhlogin
-      RHC::Config.noprompt(options.noprompt) if options.noprompt
       RHC::Config
     end
 
-    def self.needs_configuration!(cmd, config)
-      # check to see if we need to run wizard
-      if not cmd.class.suppress_wizard?
-        w = RHC::Wizard.new config
-        return w.run if w.needs_configuration?
+    def self.needs_configuration!(cmd, options, config)
+      if not (cmd.class.suppress_wizard? or
+              options.noprompt or
+              options.help or
+              config.has_local_config? or
+              config.has_opts_config?)
+        RHC::Wizard.new(config).run
       end
-      false
     end
 
     def self.to_commander(instance=Commander::Runner.instance)
@@ -67,11 +67,11 @@ module RHC
           end
 
           c.when_called do |args, options|
-            validate_command c, args, options, args_metadata
-            config = global_config_setup options
-            cmd = opts[:class].new args, options, config
-            needs_configuration! cmd, config
-            cmd.send opts[:method], *args
+            validate_command(c, args, options, args_metadata)
+            config = global_config_setup(options) #FIXME: Become RHC::Config.new(options)
+            cmd = opts[:class].new(args, options, config)
+            needs_configuration!(cmd, options, config)
+            cmd.send(opts[:method], *args)
           end
 
           unless opts[:aliases].nil?
