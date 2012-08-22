@@ -8,11 +8,10 @@ require 'rhc/exceptions'
 
 class RHC::Commands::Base
 
-  def initialize(command=nil,
-                 args=[],
+  def initialize(args=[],
                  options=Commander::Command::Options.new,
-                 config=RHC::Config)
-    @command, @args, @options, @config = command, args, options, config
+                 config=nil)
+    @args, @options, @config = args, options, config
 
     # apply timeout here even though it isn't quite a global
     $rest_timeout = @options.timeout ? @options.timeout.to_i : nil
@@ -21,7 +20,11 @@ class RHC::Commands::Base
   protected
     include RHC::Helpers
 
-    attr_reader :command, :args, :options, :config
+    attr_reader :args, :options
+
+    def config
+      @config ||= RHC::Config
+    end
 
     def application
       #@application ||= ... identify current application or throw,

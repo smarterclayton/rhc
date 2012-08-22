@@ -3,8 +3,6 @@ require 'commander'
 require 'commander/runner'
 require 'commander/delegates'
 require 'rhc/commands'
-require 'rhc/help_formatter'
-require 'rhc/command_runner'
 
 include Commander::UI
 include Commander::UI::AskForClass

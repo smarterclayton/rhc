@@ -26,7 +26,12 @@ module RHC
         begin
           run_active_command
         rescue InvalidCommandError => e
-          say RHC::HelpFormatter.new(self).render_missing
+          if provided_arguments.empty?
+            say RHC::HelpFormatter.new(self).render
+          else
+            RHC::Helpers.error "The command '#{program :name} #{provided_arguments.join(' ')}' is not recognized.\n"
+            say "See '#{program :name} help' for a list of valid commands."
+          end
           1
         rescue \
           ArgumentError,
@@ -36,7 +41,8 @@ module RHC
 
           help_bindings = CommandHelpBindings.new(active_command, commands, Commander::Runner.instance.options)
           usage = RHC::HelpFormatter.new(self).render_command(help_bindings)
-          say "#{e}\n#{usage}"
+          RHC::Helpers.error e.message
+          say "\n#{usage}"
           1
         rescue RHC::Exception, RHC::Rest::Exception => e
           RHC::Helpers.error e.message

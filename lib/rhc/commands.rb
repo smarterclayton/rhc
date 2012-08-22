@@ -1,5 +1,4 @@
 require 'commander'
-require 'rhc/helpers'
 
 module RHC
   module Commands
@@ -70,7 +69,7 @@ module RHC
           c.when_called do |args, options|
             validate_command c, args, options, args_metadata
             config = global_config_setup options
-            cmd = opts[:class].new c, args, options, config
+            cmd = opts[:class].new args, options, config
             needs_configuration! cmd, config
             cmd.send opts[:method], *args
           end
