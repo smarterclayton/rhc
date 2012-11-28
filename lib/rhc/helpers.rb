@@ -1,7 +1,6 @@
 require 'commander/user_interaction'
 require 'rhc/version'
 require 'rhc/config'
-require 'rhc/commands'
 require 'rhc/output_helpers'
 
 require 'resolv'
@@ -81,6 +80,7 @@ module RHC
     global_option '-l', '--rhlogin login', "OpenShift login"
     global_option '-p', '--password password', "OpenShift password"
     global_option '-d', '--debug', "Turn on debugging"
+    global_option '--server hostname', String, 'The OpenShift server hostname to connect to'
 
     global_option('--timeout seconds', Integer, 'Set the timeout in seconds for network commands') do |value|
       # FIXME: Refactor so we don't have to use a global var here
@@ -93,7 +93,7 @@ module RHC
     end
 
     def openshift_server
-      config.get_value('libra_server')
+      options.server || config.get_value('libra_server') || "openshift.redhat.com"
     end
     def openshift_url
       "https://#{openshift_server}"
@@ -121,14 +121,12 @@ module RHC
     def deprecated(msg,short = false)
       HighLine::use_color = false if windows? # handle deprecated commands that does not start through highline
 
-      info = " For porting and testing purposes you may switch this %s to %s by setting the DISABLE_DEPRECATED environment variable to %d.  It is not recommended to do so in a production environment as this option may be removed in future releases."
-
+      info = " For porting and testing purposes you may switch this %s to %s by setting the DISABLE_DEPRECATED environment variable to %d.  It is not recommended to do so in a production environment as this option will be removed in a future release."
       msg << info unless short
-      if RHC::Helpers.disable_deprecated?
-        raise DeprecatedError.new(msg % ['an error','a warning',0])
-      else
-        warn "Warning: #{msg}\n" % ['a warning','an error',1]
-      end
+
+      raise DeprecatedError.new(msg % ['an error','a warning',0]) if disable_deprecated?
+
+      warn "Warning: #{msg}\n" % ['a warning','an error',1]
     end
 
     def say(msg, *args)

@@ -1,8 +1,6 @@
-require 'rhc-common'
 require 'rhc/helpers'
-require 'rhc/ssh_key_helpers'
+require 'rhc/ssh_helpers'
 require 'highline/system_extensions'
-require 'net/ssh'
 require 'fileutils'
 require 'socket'
 
@@ -10,7 +8,9 @@ module RHC
   class Wizard
     include HighLine::SystemExtensions
     include RHC::Helpers
-    include RHC::SSHKeyHelpers
+    include RHC::SSHHelpers
+
+    DEFAULT_MAX_LENGTH = 16
 
     STAGES = [:greeting_stage,
               :login_stage,
@@ -28,11 +28,7 @@ module RHC
     def initialize(config, opts=nil)
       @config = config
       @config_path = config.config_path
-      if @libra_server.nil?
-        @libra_server = config['libra_server']
-        # if not set, set to default
-        @libra_server = @libra_server ?  @libra_server : "openshift.redhat.com"
-      end
+      @libra_server = (opts && opts.server) || config['libra_server'] || "openshift.redhat.com"
       @config.config_user opts.rhlogin if opts && opts.rhlogin
       @debug = opts.debug if opts
     end
@@ -81,7 +77,7 @@ module RHC
         end
 
         @password = RHC::Config.password
-        @password = RHC::get_password if @password.nil?
+        @password = ask("Password: ") { |q| q.echo = '*' } if @password.nil?
       end
 
       # instantiate a REST client that stages can use
@@ -126,7 +122,7 @@ EOF
         paragraph do
           say "No SSH keys were found. We will generate a pair of keys for you."
         end
-        ssh_pub_key_file_path = generate_ssh_key_ruby()
+        ssh_pub_key_file_path = generate_ssh_key_ruby
         paragraph do
           say "    Created: #{ssh_pub_key_file_path}\n\n"
         end
@@ -181,16 +177,17 @@ public and private keys id_rsa keys.
         hostname = Socket.gethostname.gsub(/\..*\z/,'')
         username = @username ? @username.gsub(/@.*/, '') : ''
         pubkey_base_name = "#{username}#{hostname}".gsub(/[^A-Za-z0-9]/,'').slice(0,16)
-        pubkey_default_name = find_unique_key_name(
+        default_name = find_unique_key_name(
           :keys => @ssh_keys,
           :base => pubkey_base_name,
-          :max_length => RHC::DEFAULT_MAX_LENGTH
+          :max_length => DEFAULT_MAX_LENGTH
         )
         
         paragraph do
-          key_name =  ask("Provide a name for this key: ") do |q|
-            q.default = pubkey_default_name
-            q.validate = lambda { |p| RHC::check_key(p) }
+          key_name = ask("Provide a name for this key: ") do |q|
+            q.default = default_name
+            q.validate = /^[0-9a-zA-Z]*$/
+            q.responses[:not_valid]    = 'Your key name must be letters and numbers only.'
           end
         end
       end
@@ -203,7 +200,7 @@ public and private keys id_rsa keys.
     def find_unique_key_name(opts)
       keys = opts[:keys] || @ssh_keys
       base = opts[:base] || 'default'
-      max  = opts[:max_length] || RHC::DEFAULT_MAX_LENGTH # in rhc-common.rb
+      max  = opts[:max_length] || DEFAULT_MAX_LENGTH
       key_name_suffix = 1
       candidate = base
       while @ssh_keys.detect { |k| k.name == candidate }
@@ -373,8 +370,8 @@ public and private keys id_rsa keys.
         first_pass = false
         paragraph do
           namespace = ask "Please enter a namespace or leave this blank if you wish to skip this step:" do |q|
-            q.validate  = lambda{ |p| RHC::check_namespace p }
-            q.responses[:not_valid]    = 'The namespace value must contain only letters and/or numbers (A-Za-z0-9):'
+            #q.validate  = lambda{ |p| RHC::check_namespace p }
+            #q.responses[:not_valid]    = 'The namespace value must contain only letters and/or numbers (A-Za-z0-9):'
             q.responses[:ask_on_error] = ''
           end
         end

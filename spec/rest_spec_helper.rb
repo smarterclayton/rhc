@@ -141,11 +141,12 @@ module RestSpecHelper
   end
 
   class MockRestClient < RHC::Rest::Client
-    def initialize
+    def initialize(config=RHC::Config)
       RHC::Rest::Client.stub(:new) { self }
       @domains = []
-      @user = MockRestUser.new(RHC::Config.username)
+      @user = MockRestUser.new(config.username)
       @__json_args__= {:links => mock_response_links(mock_client_links)}
+      add_headers(headers.clear)
     end
 
     def user

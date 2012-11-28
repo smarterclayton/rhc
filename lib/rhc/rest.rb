@@ -48,6 +48,7 @@ module RHC
     #The server has not found anything matching the Request-URI or the
     #requested resource does not exist
     class ResourceNotFoundException < ClientErrorException; end
+    class ApiEndpointNotFound < ResourceNotFoundException; end
 
     #Exceptions thrown in case of an HTTP 422 is received.
     class ValidationException < ClientErrorException
@@ -85,9 +86,10 @@ module RHC
 
 
   module Rest
-    #API_VERSION = '1.1'
     @@headers = {:accept => :json}
-    #@@headers = {:accept => "application/json;version=#{RHC::Rest::VERSION}"}
+    def headers
+      @@headers
+    end
 
     def logger
       Logger.new(STDOUT)

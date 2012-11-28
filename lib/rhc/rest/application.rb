@@ -133,29 +133,6 @@ module RHC
       def host
         @host ||= URI(app_url).host
       end
-
-      #Application log file tailing
-      def tail(options)
-        debug "Tail in progress for #{name}"
-
-        file_glob = options.files ? options.files : "#{cartridges.first.name}/logs/*"
-        remote_cmd = "tail#{options.opts ? ' --opts ' + Base64::encode64(options.opts).chomp : ''} #{file_glob}"
-        ssh_cmd = "ssh -t #{uuid}@#{host} '#{remote_cmd}'"
-        begin
-          #Use ssh -t to tail the logs
-          debug ssh_cmd
-          ssh_ruby(host, uuid, remote_cmd)
-        rescue SocketError => e
-          msg =<<MESSAGE
-Could not connect: #{e.message}
-You can try to run this manually if you have ssh installed:
-#{ssh_cmd}
-
-MESSAGE
-          debug "DEBUG: #{e.message}\n"
-          raise SocketError, msg
-        end
-      end
     end
   end
 end

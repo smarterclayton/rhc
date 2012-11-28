@@ -20,6 +20,3 @@ end
 
 require 'rhc/exceptions'
 
-# Replace me with proper autoloads on the module RHC
-require 'rhc-common'
-

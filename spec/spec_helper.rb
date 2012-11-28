@@ -10,8 +10,9 @@ class FakeFS::File
     # noop
   end
 
-  # Epic fail - FakeFS manages to redefine this to '/'
-  const_set('PATH_SEPARATOR', ":")
+  # FakeFS incorrectly assigns this to '/'
+  remove_const(:PATH_SEPARATOR)
+  const_set(:PATH_SEPARATOR, ":")
 
   def self.executable?(path)
     # if the file exists we will assume it is executable
@@ -132,6 +133,20 @@ module ClassSpecHelpers
     @output.to_s
   end
 
+  def capture_all(&block)
+    old_stderr = $stderr
+    old_terminal = $terminal
+    @input = StringIO.new
+    @output = StringIO.new
+    $stderr = @output
+    $terminal = MockHighLineTerminal.new @input, @output
+    yield
+  ensure
+    $stderr = old_stderr
+    $terminal = old_terminal
+    @output.to_s
+  end
+
   def run(input=[])
     #Commander::Runner.instance_variable_set :"@singleton", nil
     mock_terminal
@@ -153,6 +168,21 @@ module ClassSpecHelpers
   def user_agent_header
     lambda do |request|
       request.headers['User-Agent'] =~ %r{\Arhc/\d+\.\d+.\d+ \(.*?ruby.*?\)}
+    end
+  end
+
+  def base_config(&block)
+    config = RHC::Config.new
+    config.stub(:load_config_files)
+    defaults = config.instance_variable_get(:@defaults)
+    yield config, defaults if block_given?
+    RHC::Config.stub(:default).and_return(config)
+  end
+
+  def user_config
+    base_config do |config, defaults|
+      defaults.add 'default_rhlogin', 'test_user'
+      defaults.add 'password', 'test pass'
     end
   end
 end

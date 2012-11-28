@@ -1,6 +1,6 @@
 require 'spec_helper'
 require 'rhc/helpers'
-require 'rhc/ssh_key_helpers'
+require 'rhc/ssh_helpers'
 require 'rhc/cartridge_helpers'
 require 'rhc/core_ext'
 require 'highline/import'
@@ -12,18 +12,22 @@ describe RHC::Helpers do
   before(:each) do
     mock_terminal
     RHC::Config.set_defaults
-    @tests = HelperTests.new
   end
 
   subject do
     Class.new(Object) do
       include RHC::Helpers
+      include RHC::SSHHelpers
 
       def config
         @config ||= RHC::Config
       end
+      def options
+        @options ||= OpenStruct.new([:server])
+      end
     end.new
   end
+  let(:tests) { OutputTests.new }
 
   its(:openshift_server) { should == 'openshift.redhat.com' }
   its(:openshift_url) { should == 'https://openshift.redhat.com' }
@@ -84,6 +88,14 @@ describe RHC::Helpers do
     its(:openshift_url) { should == 'https://test.com' }
     after { ENV['LIBRA_SERVER'] = nil }
   end
+  context 'with --server environment variable' do
+    before do
+      subject.options.server = "test.com"
+    end
+    its(:openshift_server) { should == 'test.com' }
+    its(:openshift_url) { should == 'https://test.com' }
+    after { ENV['LIBRA_SERVER'] = nil }
+  end
 
   context "without RHC::Config" do
     subject do 
@@ -95,53 +107,53 @@ describe RHC::Helpers do
 
   context "Formatter" do
     it "should print out a section without any line breaks" do
-      @tests.section_no_breaks
+      tests.section_no_breaks
       $terminal.read.should == "section 1 "
     end
 
     it "should print out a section with trailing line break" do
-      @tests.section_one_break
+      tests.section_one_break
       $terminal.read.should == "section 1\n"
     end
 
     it "should print out 2 sections with matching bottom and top margins generating one space between" do
-      @tests.sections_equal_bottom_top
+      tests.sections_equal_bottom_top
       $terminal.read.should == "section 1\n\nsection 2\n"
     end
 
     it "should print out 2 sections with larger bottom margin generating two spaces between" do
-      @tests.sections_larger_bottom
+      tests.sections_larger_bottom
       $terminal.read.should == "section 1\n\n\nsection 2\n"
     end
 
     it "should print out 2 sections with larger top margin generating two spaces between" do
-      @tests.sections_larger_top
+      tests.sections_larger_top
       $terminal.read.should == "section 1\n\n\nsection 2\n"
     end
 
     it "should print out 4 sections with the middle two on the same line and a space between the lines" do
-      @tests.sections_four_on_three_lines
+      tests.sections_four_on_three_lines
       $terminal.read.should == "section 1\n\nsection 2 section 3\n\nsection 4\n"
     end
 
     it "should show the equivilance of paragaph to section(:top => 1, :bottom => 1)" do
-      @tests.section_1_1
+      tests.section_1_1
       section_1_1 = $terminal.read
-      @tests.reset
-      @tests.section_paragraph
+      tests.reset
+      tests.section_paragraph
       paragraph = $terminal.read
 
       section_1_1.should == paragraph
 
-      @tests.reset
-      @tests.section_1_1
-      @tests.section_paragraph
+      tests.reset
+      tests.section_1_1
+      tests.section_paragraph
 
       $terminal.read.should == "\nsection\n\nsection\n\n"
     end
 
     it "should show two line with one space between even though an outside newline was printed" do
-      @tests.outside_newline
+      tests.outside_newline
       $terminal.read.should == "section 1\n\nsection 2\n"
     end
   end
@@ -150,15 +162,21 @@ describe RHC::Helpers do
     it "should generate an ssh key then return nil when it tries to create another" do
       FakeFS do
         FakeFS::FileSystem.clear
-        @tests.generate_ssh_key_ruby.should match("\.ssh/id_rsa\.pub")
-        @tests.generate_ssh_key_ruby == nil
+        subject.generate_ssh_key_ruby.should match("\.ssh/id_rsa\.pub")
+        subject.generate_ssh_key_ruby == nil
       end
+    end
+
+    it "should print an error when finger print fails" do
+      Net::SSH::KeyFactory.should_receive(:load_public_key).with('1').and_raise(Net::SSH::Exception.new("An error"))
+      subject.should_receive(:error).with('An error')
+      subject.fingerprint_for_local_key('1').should be_nil
     end
   end
 
-  class HelperTests
+  class OutputTests
     include RHC::Helpers
-    include RHC::SSHKeyHelpers
+    include RHC::SSHHelpers
 
     def initialize
       @print_num = 0
@@ -299,7 +317,6 @@ end
 describe RHC::CartridgeHelpers do
   before(:each) do
     mock_terminal
-    @tests = HelperTests.new
   end
 
   subject do
