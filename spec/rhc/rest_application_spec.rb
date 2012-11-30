@@ -55,7 +55,7 @@ module RHC
         it "returns a list of all cartridges in the current application" do
           app   = app_obj
           carts = app.cartridges
-          carts.length.should equal(2)
+          carts.length.should == 2
           (0..1).each do |idx|
             carts[idx].should be_an_instance_of RHC::Rest::Cartridge
             carts[idx].name.should == "mock_cart_#{idx}"
@@ -65,7 +65,7 @@ module RHC
           app   = app_obj
           carts = app.cartridges # Disregard the first request;
           carts = app.cartridges # 2nd request simulates empty response.
-          carts.length.should equal(0)
+          carts.length.should == 2
         end
       end
 

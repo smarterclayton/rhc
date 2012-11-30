@@ -1,6 +1,6 @@
 require 'rhc/commands/base'
 require 'resolv'
-require 'rhc/git_helper'
+require 'rhc/git_helpers'
 require 'rhc/cartridge_helpers'
 
 module RHC::Commands
@@ -10,8 +10,8 @@ module RHC::Commands
     syntax "<action>"
     default_action :help
 
-    summary "Create an application and adds it to a domain"
-    description "Create an application in your domain. You can see a list of all valid cartridge types by running 'rhc cartridge list'."
+    summary "Create an application"
+    description "Create an application. You can see a list of all valid cartridge types by running 'rhc cartridge list'."
     syntax "<name> <cartridge> [-n namespace]"
     option ["-n", "--namespace namespace"], "Namespace for the application", :context => :namespace_context, :required => true
     option ["-g", "--gear-size size"], "Gear size controls how much memory and CPU your cartridges can use."
@@ -94,7 +94,7 @@ module RHC::Commands
         unless dns_propagated? rest_app.host
           add_issue("We were unable to lookup your hostname (#{rest_app.host}) in a reasonable amount of time and can not clone your application.",
                     "Clone your git repo",
-                    "rhc app git-clone #{rest_app.name}")
+                    "rhc git-clone #{rest_app.name}")
 
           output_issues(rest_app)
           return 0
@@ -102,19 +102,19 @@ module RHC::Commands
 
         if options.git
           begin
-            run_git_clone(rest_app)
+            git_clone_application(rest_app)
           rescue RHC::GitException => e
             warn "#{e}"
             unless RHC::Helpers.windows? and windows_nslookup_bug?(rest_app)
               add_issue("We were unable to clone your application's git repo - #{e}",
                         "Clone your git repo",
-                        "rhc app git-clone #{rest_app.name}")
+                        "rhc git-clone #{rest_app.name}")
             end
           end
         end
       end
 
-      display_app(rest_app, rest_app.cartridges, rest_app.scalable_carts.first)
+      display_app(rest_app, rest_app.cartridges)
 
       if issues?
         output_issues(rest_app)
@@ -128,23 +128,6 @@ module RHC::Commands
       0
     end
 
-    summary "Clone and configure an application's repository locally"
-    description "This is a convenience wrapper for 'git clone' with the added",
-                "benefit of adding configuration data such as the application's",
-                "UUID to the local repository.  It also automatically",
-                "figures out the git url from the application name so you don't",
-                "have to look it up."
-    syntax "<app> [--namespace namespace]"
-    option ["-n", "--namespace namespace"], "Namespace to add your application to", :context => :namespace_context, :required => true
-    argument :app, "The application you wish to clone", ["-a", "--app name"]
-    # TODO: Implement default values for arguments once ffranz has added context arguments
-    # argument :directory, "The name of a new directory to clone into", [], :default => nil
-    def git_clone(app)
-      rest_domain = rest_client.find_domain(options.namespace)
-      rest_app = rest_domain.find_application(app)
-      run_git_clone(rest_app)
-      0
-    end
 
     summary "Delete an application from the server"
     description "Deletes your application and all of its data from the server.",
@@ -241,18 +224,20 @@ module RHC::Commands
     argument :app, "The name of the application you are getting information on", ["-a", "--app app"], :context => :app_context
     option ["-n", "--namespace namespace"], "Namespace of the application the cartridge belongs to", :context => :namespace_context, :required => true
     option ["--state"], "Get the current state of the application's gears"
-    def show(app)
-      rest_domain = rest_client.find_domain(options.namespace)
-      rest_app = rest_domain.find_application(app)
-      unless options.state
-        display_app(rest_app,rest_app.cartridges,rest_app.scalable_carts.first)
-      else
+    def show(app_name)
+      domain = rest_client.find_domain(options.namespace)
+      app = domain.find_application(app_name)
+
+      if options.state
         results do
-          rest_app.gear_groups.each do |gg|
-            say "Geargroup #{gg.cartridges.collect { |c| c['name'] }.join('+')} is #{gg.gears.first['state']}"
+          app.gear_groups.each do |gg|
+            say "Gear group #{gg.cartridges.collect { |c| c['name'] }.join('+')} is #{gg.gears.first['state']}"
           end
         end
+      else
+        display_app(app, app.cartridges)
       end
+
       0
     end
 
@@ -359,33 +344,6 @@ module RHC::Commands
         found
       end
 
-      def check_sshkeys!
-        wizard = RHC::SSHWizard.new(rest_client)
-        wizard.run
-      end
-
-      def run_git_clone(rest_app)
-        debug "Pulling new repo down"
-
-        check_sshkeys! unless options.noprompt
-
-        repo_dir = options.repo || rest_app.name
-        git_clone_repo rest_app.git_url, repo_dir
-
-        configure_git rest_app
-
-        true
-      end
-
-      def configure_git(rest_app)
-        debug "Configuring git repo"
-
-        repo_dir = options.repo || rest_app.name
-        Dir.chdir(repo_dir) do |dir|
-          git_config_set "rhc.app-uuid", rest_app.uuid
-        end
-      end
-
       def enable_jenkins?
         # legacy issue, commander 4.0.x will place the option in the hash with nil value (BZ878407)
         options.__hash__.has_key?(:enable_jenkins)
@@ -474,7 +432,7 @@ We recommend you wait a few minutes then clone your git repository manually.
 WINSOCKISSUE
           add_issue(issue,
                     "Clone your git repo",
-                    "rhc app git-clone #{rest_app.name}")
+                    "rhc git-clone #{rest_app.name}")
 
           return true
         end

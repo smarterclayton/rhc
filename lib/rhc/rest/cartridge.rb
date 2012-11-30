@@ -3,7 +3,7 @@ require 'rhc/rest/base'
 module RHC
   module Rest
     class Cartridge < Base
-      attr_reader :type, :name, :display_name, :properties, :status_messages, :scales_to, :scales_from, :scales_with, :current_scale
+      attr_reader :type, :name, :display_name, :properties, :gear_profile, :status_messages, :scales_to, :scales_from, :scales_with, :current_scale, :supported_scales_to, :supported_scales_from, :tags
       def initialize(args, use_debug=false)
         @properties = {}
         props = args[:properties] || args["properties"] || []
@@ -17,7 +17,7 @@ module RHC
       end
 
       def scalable?
-        [scales_to,scales_from].map{|x| x > 1 || x == -1}.inject(:|)
+        supported_scales_to != supported_scales_from
       end
 
       def property(category, key)
@@ -66,6 +66,10 @@ module RHC
       def connection_info
         info = property(:cart_data, :connection_url) || property(:cart_data, :job_url) || property(:cart_data, :monitoring_url)
         info ? (info["value"] || '').rstrip : nil
+      end
+
+      def <=>(other)
+        name <=> other.name
       end
     end
   end

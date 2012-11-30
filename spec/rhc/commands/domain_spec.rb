@@ -1,7 +1,6 @@
 require 'spec_helper'
 require 'rest_spec_helper'
 require 'rhc/commands/domain'
-require 'rhc/config'
 
 describe RHC::Commands::Domain do
   before(:each) do
@@ -15,7 +14,7 @@ describe RHC::Commands::Domain do
         @rc = MockRestClient.new
       end
       it { expect { run }.should exit_with_code(0) }
-      it { run_output.should match(/No domain exists.  You can use/) }
+      it { run_output.should match(/In order to deploy applications.*rhc domain create/) }
     end
     context 'when help is shown' do
       let(:arguments) { ['domain', '--noprompt', '--help'] }
@@ -32,7 +31,7 @@ describe RHC::Commands::Domain do
         @rc = MockRestClient.new
       end
       it { expect { run }.should exit_with_code(0) }
-      it { run_output.should match(/No domain exists.  You can use/) }
+      it { run_output.should match(/In order to deploy applications.*rhc domain create/) }
     end
 
     context 'when run with one domain no apps' do
@@ -44,7 +43,7 @@ describe RHC::Commands::Domain do
       it "should match output" do
         output = run_output
         output.should match(/Applications in onedomain/)
-        output.should match(/No applications. You can use/)
+        output.should match(/No applications exist in this domain.*rhc app create/)
       end
     end
 

@@ -10,6 +10,7 @@ module RHC
                   :git_url, :app_url, :gear_profile, :framework,
                   :scalable, :health_check_path, :embedded, :gear_count,
                   :ssh_url
+      alias_method :domain_name, :domain_id
 
       # Query helper to say consistent with cartridge
       def scalable?
@@ -25,12 +26,13 @@ module RHC
 
       def add_cartridge(name, timeout=nil)
         debug "Adding cartridge #{name}"
+        @cartridges = nil
         rest_method "ADD_CARTRIDGE", {:name => name}, timeout
       end
 
       def cartridges
         debug "Getting all cartridges for application #{name}"
-        rest_method "LIST_CARTRIDGES"
+        @cartridges ||= rest_method "LIST_CARTRIDGES"
       end
 
       def gear_groups
@@ -132,6 +134,17 @@ module RHC
 
       def host
         @host ||= URI(app_url).host
+      end
+
+      def ssh_string
+        uri = URI(ssh_url)
+        "#{uri.user}@#{uri.host}"
+      end
+
+      def <=>(other)
+        c = name <=> other.name
+        return c unless c == 0
+        domain_id <=> other.domain_id
       end
     end
   end

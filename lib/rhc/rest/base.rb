@@ -8,9 +8,9 @@ module RHC
 
       attr_reader :messages
 
-      def initialize(json_args={}, use_debug=false)
+      def initialize(json_args=nil, use_debug=false)
         @debug = use_debug
-        @__json_args__ = json_args
+        @__json_args__ = json_args || {}
         @messages = []
       end
 
@@ -43,6 +43,7 @@ module RHC
         def self.attr_reader(*names)
           names.each do |name|
             define_method(name) do
+#              raise "Uh, @__json_args__ is null" if @__json_args__.nil?
               instance_variable_get("@#{name}") || @__json_args__[name] || @__json_args__[name.to_s]
             end
           end

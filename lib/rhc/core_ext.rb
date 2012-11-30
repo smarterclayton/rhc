@@ -49,6 +49,16 @@ module OpenURI
   end
 end
 
+class Hash
+  def slice!(*args, &block)
+    s = []
+    args.inject([]) do |a, k|
+      s << [k, delete(k)] if has_key?(k)
+    end
+    s
+  end
+end
+
 # Some versions of highline get in an infinite loop when trying to wrap.
 # Fixes BZ 866530.
 class HighLine

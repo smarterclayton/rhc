@@ -189,6 +189,7 @@ module RestSpecHelper
 
   class MockRestUser < RHC::Rest::User
     def initialize(login)
+      super({})
       @login = login
       @keys = [
         MockRestKey.new('mockkey1', 'ssh-rsa', 'AAAAB3NzaC1yc2EAAAADAQABAAABAQDNK8xT3O+kSltmCMsSqBfAgheB3YFJ9Y0ESJnFjFASVxH70AcCQAgdQSD/r31+atYShJdP7f0AMWiQUTw2tK434XSylnZWEyIR0V+j+cyOPdVQlns6D5gPOnOtweFF0o18YulwCOK8Q1H28GK8qyWhLe0FcMmxtKbbQgaVRvQdXZz4ThzutCJOyJm9xVb93+fatvwZW76oLLvfFJcJSOK2sgW7tJM2A83bm4mwixFDF7wO/+C9WA+PgPKJUIjvy1gZjBhRB+3b58vLOnYhPOgMNruJwzB+wJ3pg8tLJEjxSbHyyoi6OqMBs4BVV7LdzvwTDxEjcgtHVvaVNXgO5iRX'),
@@ -207,6 +208,7 @@ module RestSpecHelper
 
   class MockRestDomain < RHC::Rest::Domain
     def initialize(id, client)
+      super({})
       @id = id
       @client = client
       @applications = []
@@ -245,6 +247,7 @@ module RestSpecHelper
 
   class MockRestGearGroup < RHC::Rest::GearGroup
     def initialize
+      super({})
       @cartridges = [{'name' => 'fake_geargroup_cart-0.1'}]
       @gears = [{'state' => 'started', 'id' => 'fakegearid'}]
     end
@@ -256,6 +259,7 @@ module RestSpecHelper
     end
 
     def initialize(name, type, domain, scale=nil, gear_profile='default')
+      super({})
       @name = name
       @domain = domain
       @cartridges = []
@@ -274,8 +278,8 @@ module RestSpecHelper
       @__json_args__= {:links => mock_response_links(mock_app_links('mock_domain_0', 'mock_app_0'))}
       cart = add_cartridge(type, false) if type
       if scale
-        cart.scales_to = -1
-        cart.scales_from = 2
+        cart.supported_scales_to = (cart.scales_to = -1)
+        cart.supported_scales_from = (cart.scales_from = 2)
         cart.current_scale = 2
         cart.scales_with = "haproxy-1.4"
       end
@@ -325,8 +329,9 @@ module RestSpecHelper
   end
 
   class MockRestCartridge < RHC::Rest::Cartridge
-    attr_accessor :scales_to, :scales_from, :current_scale, :scales_with, :display_name
+    attr_accessor :supported_scales_to, :supported_scales_from, :scales_to, :scales_from, :current_scale, :scales_with, :display_name, :gear_profile
     def initialize(name, type, app=nil, properties={:cart_data => {:connection_url => {'name' => 'connection_url', 'value' => "http://fake.url" }}})
+      super({})
       @name = name
       @type = type
       @app = app
@@ -335,6 +340,7 @@ module RestSpecHelper
       @scales_from = 1
       @scales_to = 1
       @current_scale = 1
+      @gear_profile = 'small'
     end
 
     def destroy
@@ -374,6 +380,7 @@ module RestSpecHelper
 
   class MockRestKey < RHC::Rest::Key
     def initialize(name, type, content)
+      super({})
       @name    = name
       @type    = type
       @content = content

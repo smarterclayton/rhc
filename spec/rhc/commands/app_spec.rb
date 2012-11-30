@@ -221,7 +221,7 @@ describe RHC::Commands::App do
     before(:each) do
       @rc = MockRestClient.new
       @domain = @rc.add_domain("mockdomain")
-      @instance.stub(:run_git_clone) { raise RHC::GitException }
+      @instance.stub(:git_clone_application) { raise RHC::GitException }
     end
 
     context 'when run with error in git clone' do
@@ -290,19 +290,6 @@ describe RHC::Commands::App do
     end
   end
 
-  describe 'app git-clone' do
-    let(:arguments) { ['app', 'git-clone', '--trace', '-a', 'app1', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
-
-    context 'when run' do
-      before(:each) do
-        @rc = MockRestClient.new
-        @domain = @rc.add_domain("mockdomain")
-        @app = @domain.add_application("app1", "mock_unique_standalone_cart")
-      end
-      it { expect { run }.should exit_with_code(0) }
-    end
-  end
-
   describe 'app delete' do
     let(:arguments) { ['app', 'delete', '--trace', '-a', 'app1', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
 
@@ -345,7 +332,9 @@ describe RHC::Commands::App do
       before(:each) do
         @rc = MockRestClient.new
         @domain = @rc.add_domain("mockdomain")
-        @domain.add_application("app1", "mock_type",true)
+        app = @domain.add_application("app1", "mock_type", true)
+        cart1 = app.add_cartridge('mock_cart-1')
+        cart2 = app.add_cartridge('mock_cart-2')
       end
       it { run_output.should match("app1 @ https://app1-mockdomain.fake.foo/") }
       it { run_output.should match("Scaled x2") }

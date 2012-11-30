@@ -1,7 +1,33 @@
 require 'open4'
+require 'rhc/wizard'
 
 module RHC
   module GitHelpers
+    def check_sshkeys!
+      wizard = RHC::SSHWizard.new(rest_client)
+      wizard.run
+    end
+
+    def git_clone_application(app)
+      debug "Checking SSH keys through the wizard"
+      check_sshkeys! unless options.noprompt
+
+      repo_dir = options.repo || app.name
+
+      debug "Pulling new repo down"
+      git_clone_repo(app.git_url, repo_dir)
+
+      debug "Configuring git repo"
+      Dir.chdir(repo_dir) do |dir|
+        git_config_set "rhc.app-uuid", app.uuid
+      end
+
+      true
+    end
+
+    def configure_git(rest_app)
+    end
+
     # :nocov: These all call external binaries so test them in cucumber
     def git_config_get(key)
       config_get_cmd = "git config --get #{key}"

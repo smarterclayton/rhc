@@ -31,31 +31,30 @@ module RHC
     end
 
     #---------------------------
-    # Domain information
+    # Application information
     #---------------------------
-
-    # This is a little different because we don't want to recreate the display_app function
-    def display_domain(domain)
-      say "No domain exists.  You can use 'rhc domain create' to create a namespace for applications." and return unless domain
-      header "Applications in %s" % domain.id do
-        domain.applications.each do |a|
-          display_app(a,a.cartridges,a.scalable_carts.first)
-        end.blank? and say "No applications. You can use 'rhc app create' to create new applications."
+    def display_app(app, cartridges=nil)
+      paragraph do
+        header "%s @ %s" % [app.name, app.app_url]
+        header "Info"
+        say table([:creation_time, :uuid, :gear_profile, :git_url, :ssh_string, :aliases].map do |sym|
+          v = app.send(sym)
+          ["#{table_heading(sym)}:", format_value(sym, v)] if v.present?
+        end.compact).join("\n")
+        header "Cartridges"
+        (cartridges || []).sort.each do |c|
+          line = [c.name]
+          line << "(#{c.display_name})" if c.display_name.present?
+          line << format_scale_info(c) if c.scalable?
+          say line.join(' ')
+          say "  #{c.connection_info}" if c.connection_info
+        end.blank? and say "None"
       end
     end
 
-    #---------------------------
-    # Application information
-    #---------------------------
-    def display_app(app,cartridges = nil,scalable_cart = nil)
-      heading = "%s @ %s" % [app.name, app.app_url]
-      paragraph do
-        header heading do
-          display_app_properties(app,:creation_time,:uuid,:gear_profile,:git_url,:ssh_url,:aliases)
-          display_included_carts(cartridges) if cartridges
-          display_scaling_info(app,scalable_cart) if scalable_cart
-        end
-      end
+    def format_scale_info(cart)
+      "Scaled x%d (minimum: %s, maximum: %s) on %s gears" % 
+        [:current_scale, :scales_from, :scales_to, :gear_profile].map{ |s| format_value(s, cart.send(s)) }
     end
 
     def display_app_properties(app,*properties)
@@ -66,10 +65,7 @@ module RHC
     end
 
     def display_included_carts(carts)
-      properties = Hash[carts.map do |cart|
-        [cart.name,cart.connection_info]
-      end]
-
+      properties = carts.map{ |c| [c.name, c.connection_info] }
       properties = "None" unless properties.present?
 
       say_table \
@@ -85,7 +81,7 @@ module RHC
       properties = get_properties(cart,*values)
       # Format the string for applications
       properties = "Scaled x%d (minimum: %s, maximum: %s) with %s on %s gears" %
-        [properties.values_at(*values), app.gear_profile].flatten
+        [properties.values_at(*values), cart.gear_profile].flatten
 
       say_table \
         "Scaling Info",
@@ -96,12 +92,12 @@ module RHC
     # Cartridge information
     #---------------------------
 
-    def display_cart(cart,properties = nil)
-      @table_displayed = false
-      header cart.name do
-        display_cart_properties(cart,properties) if properties
-        display_cart_scaling_info(cart) if cart.scalable?
-        display_no_info("cartridge") unless @table_displayed
+    def display_cart(c, properties = nil)
+      line = ["Cartridge", c.name]
+      line << "(#{c.display_name})" if c.display_name.present?
+      header line.join(' ') do
+        say format_scale_info(c) if c.scalable?
+        say "  Connection URL: #{c.connection_info}" if c.connection_info
       end
     end
 
@@ -172,7 +168,7 @@ module RHC
         case prop
         when :creation_time
           date(value)
-        when :scales_from,:scales_to
+        when :scales_to, :supported_scales_to
           (value == -1 ? "available gears" : value)
         when :aliases
           value.join ' '

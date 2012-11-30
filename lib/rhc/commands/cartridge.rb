@@ -8,7 +8,7 @@ module RHC::Commands
     alias_action :"app cartridge", :root_command => true, :deprecated => true
     default_action :list
 
-    summary "List supported embedded cartridges"
+    summary "List available cartridges"
     alias_action :"app cartridge list", :root_command => true, :deprecated => true
     def list
       rest_client = RHC::Rest::Client.new(openshift_rest_node, nil, nil)

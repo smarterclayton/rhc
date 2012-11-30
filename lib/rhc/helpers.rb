@@ -77,17 +77,17 @@ module RHC
     # Global config
     #
 
-    global_option '-l', '--rhlogin login', "OpenShift login"
-    global_option '-p', '--password password', "OpenShift password"
-    global_option '-d', '--debug', "Turn on debugging"
-    global_option '--server hostname', String, 'The OpenShift server hostname to connect to'
+    global_option '-l', '--rhlogin LOGIN', "OpenShift login"
+    global_option '-p', '--password PASSWORD', "OpenShift password"
+    global_option '-d', '--debug', "Turn on debugging", :hide => true
+    global_option '--server NAME', String, 'An OpenShift server hostname (default: openshift.redhat.com)'
 
-    global_option('--timeout seconds', Integer, 'Set the timeout in seconds for network commands') do |value|
+    global_option('--timeout SECONDS', Integer, 'The timeout for operations') do |value|
       # FIXME: Refactor so we don't have to use a global var here
       $rest_timeout = value
     end
-    global_option '--noprompt', "Suppress the interactive setup wizard from running before a command"
-    global_option '--config FILE', "Path of a different config file"
+    global_option '--noprompt', "Suppress the interactive setup wizard from running before a command", :hide => true
+    global_option '--config FILE', "Path of a different config file", :hide => true
     def config
       raise "Operations requiring configuration must define a config accessor"
     end
