@@ -9,7 +9,7 @@ module RHC
       define_attr :domain_id, :name, :creation_time, :uuid, :aliases,
                   :git_url, :app_url, :gear_profile, :framework,
                   :scalable, :health_check_path, :embedded, :gear_count,
-                  :ssh_url
+                  :ssh_url, :building_app
       alias_method :domain_name, :domain_id
 
       # Query helper to say consistent with cartridge

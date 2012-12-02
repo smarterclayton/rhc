@@ -44,6 +44,8 @@ module RHC::Commands
       raise RHC::DomainNotFoundException.new("No domains found. Please create a domain with 'rhc domain create <namespace>' before creating applications.") if rest_client.domains.empty?
       rest_domain = rest_client.find_domain(options.namespace)
 
+      messages = []
+
       paragraph do
         say "Creating application '#{name}' ... "
 
@@ -52,20 +54,23 @@ module RHC::Commands
         rest_app = create_app(name, cartridge, rest_domain,
                               options.gear_size, options.scaling)
 
+        messages.concat(rest_app.messages)
+
         success "done"
       end
 
-      if enable_jenkins? 
+      build_app_exists = rest_app.building_app
 
-        jenkins_app = rest_app.building_app
-
-        unless jenkins_app
+      if enable_jenkins?
+        unless build_app_exists
           paragraph do
             say "Setting up a Jenkins application ... "
 
             begin
-              jenkins_app = setup_jenkins_app(rest_domain) 
+              build_app_exists = create_app(jenkins_app_name, "jenkins-1.4", rest_domain)
+
               success "done"
+              messages.concat(build_app_exists.messages)
 
             rescue Exception => e
               warn "not complete"
@@ -77,15 +82,18 @@ module RHC::Commands
           end
         end
 
-        if jenkins_rest_app
+        if build_app_exists
           paragraph do
             say "Setting up Jenkins build ... "
             successful, attempts, exit_code, exit_message = false, 1, 157, nil
             while (!successful && exit_code == 157 && attempts < MAX_RETRIES)
               begin
-                setup_jenkins_client(rest_app)
+                cartridge = rest_app.add_cartridge("jenkins-client-1.4", 300)
                 successful = true
+
                 success "done"
+                messages.concat(cartridge.messages)
+
               rescue RHC::Rest::ServerErrorException => e
                 if (e.code == 157)
                   # error downloading Jenkins /jnlpJars/jenkins-cli.jar
@@ -153,10 +161,7 @@ module RHC::Commands
       if issues?
         output_issues(rest_app)
       else
-        results { 
-          rest_app.messages.each { |msg| say msg } 
-          jenkins_rest_app.messages.each { |msg| say msg } if enable_jenkins? and jenkins_rest_app
-        }
+        results{ messages.each { |msg| say msg } }.blank? and "Application created"
       end
 
       0
@@ -346,7 +351,7 @@ module RHC::Commands
         app_options[:debug] = true if @debug
 
         debug "Creating application '#{name}' with these options - #{app_options.inspect}"
-        rest_app = rest_domain.add_application name, app_options
+        rest_app = rest_domain.add_application(name, app_options)
         debug "'#{rest_app.name}' created"
 
         rest_app
@@ -390,55 +395,9 @@ module RHC::Commands
       end
 
       def jenkins_app_name
-        return "jenkins" if options.enable_jenkins == true || options.enable_jenkins == "true" || (enable_jenkins? && options.enable_jenkins.nil?)
-        return options.enable_jenkins if options.enable_jenkins.is_a?(String)
-        nil
-      end
-
-      def check_jenkins(app_name, rest_domain)
-        debug "Checking if jenkins arguments are valid"
-        raise ArgumentError, "The --no-dns option can't be used in conjunction with --enable-jenkins when creating an application.  Either remove the --no-dns option or first install your application with --no-dns and then use 'rhc cartridge add' to embed the Jenkins client." unless options.dns
-
-
-        begin
-          jenkins_rest_app = rest_domain.find_application(:framework => "jenkins-1.4")
-        rescue RHC::ApplicationNotFoundException
-          debug "No Jenkins apps found during check"
-
-          # app name and jenkins app name are the same
-          raise ArgumentError, "You have named both your main application and your Jenkins application '#{app_name}'. In order to continue you'll need to specify a different name with --enable-jenkins or choose
-a different application name." if jenkins_app_name == app_name
-
-          # jenkins app name and existing app are the same
-          begin
-            rest_app = rest_domain.find_application(:name => jenkins_app_name)
-            raise ArgumentError, "You have named your Jenkins application the same as an existing application '#{app_name}'. In order to continue you'll need to specify a different name with --enable-jenkins or delete the current application using 'rhc app delete #{app_name}'"
-          rescue RHC::ApplicationNotFoundException
-          end
-
-          debug "Jenkins arguments valid"
-          return nil
-        end
-
-        say "Found existing Jenkins application: #{jenkins_rest_app.name}"
-        say "Ignoring user specified Jenkins app name : #{options.enable_jenkins}" if jenkins_rest_app.name != options.enable_jenkins and options.enable_jenkins.is_a?(String)
-
-        debug "Jenkins arguments valid"
-        jenkins_rest_app
-      end
-
-      def setup_jenkins_app(rest_domain)
-        debug "Creating a new jenkins application"
-        rest_app = create_app(jenkins_app_name, "jenkins-1.4", rest_domain)
-
-        say "Jenkins domain name is being propagated worldwide (this might take a minute)..."
-        # If we can't get the dns we can't install the client so return nil
-        dns_propagated?(rest_app.host) ? rest_app : nil
-
-      end
-
-      def setup_jenkins_client(rest_app)
-        rest_app.add_cartridge("jenkins-client-1.4", 300)
+        if options.enable_jenkins.is_a? String
+          options.enable_jenkins
+        end || "jenkins"
       end
 
       def run_nslookup(host)

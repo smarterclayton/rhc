@@ -97,7 +97,7 @@ module RHC
       line = ["Cartridge", c.name]
       line << "(#{c.display_name})" if c.display_name.present?
       header line.join(' ') do
-        say format_scale_info(c) if c.scalable?
+        say "  #{format_scale_info(c)}" if c.scalable?
         say "  Connection URL: #{c.connection_info}" if c.connection_info
       end
     end

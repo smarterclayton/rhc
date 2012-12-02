@@ -301,7 +301,7 @@ describe RHC::Commands::App do
       end
       it "should not remove app when no is sent as input" do
         @app = @domain.add_application("app1", "mock_type")
-        expect { run(["no"]) }.should exit_with_code(0)
+        expect { run(["no"]) }.should exit_with_code(1)
         @domain.applications.length.should == 1
         @domain.applications[0] == @app
       end

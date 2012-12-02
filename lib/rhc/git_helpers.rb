@@ -50,8 +50,9 @@ module RHC
         debug "Running #{cmd} 2>&1"
         output = %x[#{cmd} 2>&1]
         raise RHC::GitException, "Error while adding config values to git - #{output}" unless output.empty?
-      end  
+      end
     end
+    # :nocov:
 
     def git_clone_repo(git_url, repo_dir)
       # quote the repo to avoid input injection risk
@@ -85,6 +86,5 @@ module RHC
 
       success "Your application is now in '#{repo_dir}'"
     end
-    # :nocov:
   end
 end

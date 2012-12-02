@@ -334,7 +334,7 @@ module RestSpecHelper
       @name = name
       @type = type
       @app = app
-      @properties = properties
+      @properties = properties.stringify_keys!
       @status_messages = [{"message" => "started", "gear_id" => "123"}]
       @scales_from = 1
       @scales_to = 1
