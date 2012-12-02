@@ -91,6 +91,10 @@ module RHC
     def config
       raise "Operations requiring configuration must define a config accessor"
     end
+    global_option '--mock', "Run in mock mode", :hide => true do
+      require 'rhc/rest/mock'
+      RHC::Rest::Mock.start
+    end
 
     def openshift_server
       options.server || config.get_value('libra_server') || "openshift.redhat.com"
