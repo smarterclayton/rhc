@@ -130,6 +130,7 @@ module RHC
     end
 
     def say(msg, *args)
+      @@section_bottom_last ||= 0
       if Hash[*args][:stderr]
         $stderr.puts msg
       else
@@ -168,13 +169,13 @@ module RHC
       max = items.each do |item|
         item.each_with_index do |s, i|
           item[i] = s.to_s
-          columns[i] = [columns[i] || 0, s.length].max if s.respond_to?(:length)
+          columns[i] = [columns[i] || 0, item[i].length].max
         end
       end
       align = opts[:align] || []
       join = opts[:join] || ' '
       items.map do |item|
-        item.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), columns[i], ' ') }.join(join).strip
+        item.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), columns[i], ' ') }.join(join).rstrip
       end
     end
 
@@ -201,11 +202,32 @@ module RHC
         :scales_from    => "Minimum",
         :scales_to      => "Maximum",
         :url            => "URL",
-        :ssh            => "SSH",
+        :ssh_string     => "SSH",
         :gear_profile   => "Gear Size"
       })
 
       headings[value]
+    end
+
+    class StringTee < StringIO
+      attr_reader :tee
+      def initialize(other)
+        @tee = other
+        super()
+      end
+      def <<(buf)
+        tee << buf
+        super
+      end
+    end
+
+    def tee(&block)
+      original = [$stdout, $stderr]
+      $stdout, $stderr = (tees = original.map{ |io| StringTee.new(io) })
+      yield
+    ensure
+      $stdout, $stderr = original
+      tees.each(&:close_write).map(&:string)
     end
 
     def header(s,opts = {})
@@ -253,15 +275,18 @@ module RHC
     #  top - top margin specified in lines
     #  bottom - bottom margin specified in line
     #
-    @@section_bottom_last = 0
+    @@section_bottom_last = nil
     def section(params={}, &block)
       top = params[:top]
       top = 0 if top.nil?
       bottom = params[:bottom]
       bottom = 0 if bottom.nil?
 
+      # the first section cannot take a newline
+      top = 0 if @@section_bottom_last.nil?
+
       # add more newlines if top is greater than the last section's bottom margin
-      top_margin = @@section_bottom_last
+      top_margin = @@section_bottom_last || 0
 
       # negitive previous bottoms indicate that an untracked newline was
       # printed and so we do our best to negate it since we can't remove it
@@ -302,7 +327,7 @@ module RHC
     # to distinguish the final results of a command from other output
     #
     def results(&block)
-      paragraph do
+      section(:top => 1, :bottom => 0) do
         say "RESULT:"
         yield
       end

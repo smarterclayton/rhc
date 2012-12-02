@@ -7,12 +7,12 @@ module RHC::Commands
     def run
       domains = rest_client.domains
 
-      say "In order to deploy applications, you must create a domain with 'rhc setup' or 'rhc domain create'." and return 1 if domains.empty?
+      info "In order to deploy applications, you must create a domain with 'rhc setup' or 'rhc domain create'." and return 1 if domains.empty?
 
       applications = domains.map(&:applications).flatten.sort
 
       applications.each{ |a| display_app(a, a.cartridges) }.blank? and
-        say "No applications. Use 'rhc app create'." and
+        info "No applications. Use 'rhc app create'." and
         return 1
 
       0

@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'rhc/helpers'
 require 'rhc/ssh_helpers'
 require 'rhc/cartridge_helpers'
+require 'rhc/git_helpers'
 require 'rhc/core_ext'
 require 'highline/import'
 require 'rhc/config'
@@ -156,6 +157,12 @@ describe RHC::Helpers do
       tests.outside_newline
       $terminal.read.should == "section 1\n\nsection 2\n"
     end
+  end
+
+  context "Git Helpers" do
+    subject{ Class.new(Object){ include RHC::GitHelpers }.new }
+    before{ subject.stub(:git_version){ raise "Fake Exception" } }
+    its(:has_git?) { should be_false }
   end
 
   context "SSH Key Helpers" do

@@ -145,7 +145,7 @@ module RestSpecHelper
       RHC::Rest::Client.stub(:new) { self }
       @domains = []
       @user = MockRestUser.new(config.username)
-      @__json_args__= {:links => mock_response_links(mock_client_links)}
+      self.attributes = {:links => mock_response_links(mock_client_links)}
       add_headers(headers.clear)
     end
 
@@ -212,7 +212,7 @@ module RestSpecHelper
       @id = id
       @client = client
       @applications = []
-      @__json_args__= {:links => mock_response_links(mock_domain_links('mock_domain_0'))}
+      self.attributes = {:links => mock_response_links(mock_domain_links('mock_domain_0'))}
     end
 
     def update(id)
@@ -275,7 +275,7 @@ module RestSpecHelper
         @scalable = true
         @embedded = {"haproxy-1.4" => {:info => ""}}
       end
-      @__json_args__= {:links => mock_response_links(mock_app_links('mock_domain_0', 'mock_app_0'))}
+      self.attributes = {:links => mock_response_links(mock_app_links('mock_domain_0', 'mock_app_0'))}
       cart = add_cartridge(type, false) if type
       if scale
         cart.supported_scales_to = (cart.scales_to = -1)
@@ -329,7 +329,6 @@ module RestSpecHelper
   end
 
   class MockRestCartridge < RHC::Rest::Cartridge
-    attr_accessor :supported_scales_to, :supported_scales_from, :scales_to, :scales_from, :current_scale, :scales_with, :display_name, :gear_profile
     def initialize(name, type, app=nil, properties={:cart_data => {:connection_url => {'name' => 'connection_url', 'value' => "http://fake.url" }}})
       super({})
       @name = name

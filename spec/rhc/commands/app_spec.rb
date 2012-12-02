@@ -222,6 +222,7 @@ describe RHC::Commands::App do
       @rc = MockRestClient.new
       @domain = @rc.add_domain("mockdomain")
       @instance.stub(:git_clone_application) { raise RHC::GitException }
+      @instance.should_not_receive(:check_sshkeys!)
     end
 
     context 'when run with error in git clone' do

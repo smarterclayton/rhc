@@ -3,26 +3,19 @@ require 'rhc/rest/base'
 module RHC
   module Rest
     class Cartridge < Base
-      attr_reader :type, :name, :display_name, :properties, :gear_profile, :status_messages, :scales_to, :scales_from, :scales_with, :current_scale, :supported_scales_to, :supported_scales_from, :tags
-      def initialize(args, use_debug=false)
-        @properties = {}
-        props = args[:properties] || args["properties"] || []
-        props.each do |p|
-          category = @properties[:"#{p['type']}"] || {}
-          category[:"#{p['name']}"] = p
-          @properties[:"#{p['type']}"] = category
-        end
-
-        super
-      end
+      define_attr :type, :name, :display_name, :properties, :gear_profile, :status_messages, :scales_to, :scales_from, :scales_with, :current_scale, :supported_scales_to, :supported_scales_from, :tags
 
       def scalable?
         supported_scales_to != supported_scales_from
       end
 
-      def property(category, key)
-        category = properties[category]
-        category ? category[key] : nil
+      def display_name
+        attribute(:display_name) || name
+      end
+
+      def property(type, key)
+        key, type = key.to_s, type.to_s
+        properties.select{ |p| p['type'] == type }.find{ |p| p['name'] == key }
       end
 
       def status

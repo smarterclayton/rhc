@@ -1,17 +1,22 @@
 require 'open4'
-require 'rhc/wizard'
 
 module RHC
   module GitHelpers
-    def check_sshkeys!
-      wizard = RHC::SSHWizard.new(rest_client)
-      wizard.run
+    def git_version
+      @git_version ||= `git --version 2>&1`.strip #:nocov:
+    end
+
+    def has_git?
+      @has_git ||= begin
+          @git_version = nil
+          git_version
+          $?.success?
+        rescue
+          false
+        end
     end
 
     def git_clone_application(app)
-      debug "Checking SSH keys through the wizard"
-      check_sshkeys! unless options.noprompt
-
       repo_dir = options.repo || app.name
 
       debug "Pulling new repo down"
@@ -23,9 +28,6 @@ module RHC
       end
 
       true
-    end
-
-    def configure_git(rest_app)
     end
 
     # :nocov: These all call external binaries so test them in cucumber
@@ -53,32 +55,35 @@ module RHC
 
     def git_clone_repo(git_url, repo_dir)
       # quote the repo to avoid input injection risk
-      repo_dir = (repo_dir ? " \"#{repo_dir}\"" : "")
-      clone_cmd = "git clone #{git_url}#{repo_dir}"
+      destination = (repo_dir ? " \"#{repo_dir}\"" : "")
+      clone_cmd = "git clone #{git_url}#{destination}"
       debug "Running #{clone_cmd}"
 
-      err = nil
-      if RHC::Helpers.windows?
-        # windows does not support Open4 so redirect stderr to stdin
-        # and print the whole output which is not as clean
-        output = %x[#{clone_cmd} 2>&1]
-        if $?.exitstatus != 0
-          err = output + " - Check to make sure you have correctly installed git and it is added to your path."
+      say "Calling 'git clone #{git_url}'"
+
+      status, stdout, stderr = nil
+
+      paragraph do
+        if RHC::Helpers.windows?
+          system(clone_cmd)
+          status = $?.exitstatus
         else
-          say output
-        end
-      else
-        paragraph do
-          Open4.popen4(clone_cmd) do |pid, stdin, stdout, stderr|
-            stdin.close
-            say stdout.read
-            err = stderr.read
-          end
-          say "done"
+          stdout, stderr = [$stdout, $stderr].map{ |t| RHC::Helpers::StringTee.new(t) }
+          status = Open4::spawn(cmd, 'stdout' => stdout, 'stderr' => stderr, 'raise' => false)
+          stdout, stderr = [stdout, stderr].map(&:string)
         end
       end
 
-      raise RHC::GitException, "Error in git clone - #{err}" if $?.exitstatus != 0
+      if status
+        case stderr
+        when /fatal: destination path '[^']*' already exists and is not an empty directory./
+          raise RHC::GitDirectoryExists, "The directory you are cloning into already exists."
+        else
+          raise RHC::GitException, "Unable to clone your repository"
+        end
+      end
+
+      success "Your application is now in '#{repo_dir}'"
     end
     # :nocov:
   end

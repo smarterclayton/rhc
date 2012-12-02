@@ -50,6 +50,18 @@ module OpenURI
 end
 
 class Hash
+  def stringify_keys!
+    keys.each do |key|
+      v = delete(key)
+      if v.is_a? Hash
+        v.stringify_keys!
+      elsif v.is_a? Array
+        v.each{ |value| value.stringify_keys! if value.is_a? Hash }
+      end
+      self[(key.to_s rescue key) || key] = v
+    end
+    self
+  end
   def slice!(*args, &block)
     s = []
     args.inject([]) do |a, k|

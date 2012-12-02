@@ -35,20 +35,21 @@ module RHC
     #---------------------------
     def display_app(app, cartridges=nil)
       paragraph do
-        header "%s @ %s" % [app.name, app.app_url]
-        header "Info"
-        say table([:creation_time, :uuid, :gear_profile, :git_url, :ssh_string, :aliases].map do |sym|
+        header "%s @ %s (uuid: %s)" % [app.name, app.app_url, app.uuid]
+        say table([:creation_time, :gear_profile, :git_url, :ssh_string, :aliases].map do |sym|
           v = app.send(sym)
-          ["#{table_heading(sym)}:", format_value(sym, v)] if v.present?
+          [' ', "#{table_heading(sym)}:", format_value(sym, v)] if v.present?
         end.compact).join("\n")
-        header "Cartridges"
-        (cartridges || []).sort.each do |c|
-          line = [c.name]
-          line << "(#{c.display_name})" if c.display_name.present?
-          line << format_scale_info(c) if c.scalable?
-          say line.join(' ')
-          say "  #{c.connection_info}" if c.connection_info
-        end.blank? and say "None"
+        paragraph do
+          header "Cartridges"
+          (cartridges || []).sort.each do |c|
+            line = [c.name]
+            line << "(#{c.display_name})" if c.display_name != c.name
+            line << format_scale_info(c) if c.scalable?
+            say line.join(' ')
+            say "  #{c.connection_info}" if c.connection_info
+          end.blank? and say "None"
+        end
       end
     end
 

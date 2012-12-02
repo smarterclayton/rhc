@@ -37,13 +37,14 @@ module RHC
     end
   end
 
-  # Makes sense to use its own exit code since this is different from a
-  # resource error
   class GitException < Exception
     def initialize(message="Git returned an error")
       super message, 216
     end
   end
+
+  class GitPermissionDenied < GitException; end
+  class GitDirectoryExists < GitException; end
 
   class DeprecatedError < RuntimeError; end
   

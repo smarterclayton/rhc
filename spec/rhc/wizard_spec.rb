@@ -83,7 +83,7 @@ describe RHC::Wizard do
       @wizard.setup_mock_has_git(true)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for git \.\.\. found")
+      output.should match(/Checking for git .*found/)
     end
 
     it "should ask for a namespace" do
@@ -93,13 +93,13 @@ describe RHC::Wizard do
       $terminal.write_line("testnamespace")
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for your namespace \.\.\. not found")
+      output.should match(/Checking your namespace .*none/)
     end
 
     it "should show app creation commands" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match 'Below is a list of'
+      output.should match('rhc app create <app name> mock_standalone_cart-1')
     end
 
     it "should show a thank you message" do
@@ -166,7 +166,7 @@ describe RHC::Wizard do
       @wizard.setup_mock_has_git(false)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for git \.\.\. needs to be installed")
+      output.should match(/Checking for git .*needs to be installed/)
       output.should match("Automated installation of client tools is not supported for your platform")
     end
 
@@ -174,19 +174,19 @@ describe RHC::Wizard do
       $terminal.write_line("testnamespace")
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for your namespace \.\.\. not found")
+      output.should match(/Checking your namespace .*none/)
     end
 
     it "should show app creation commands" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match 'Below is a list of'
+      output.should match('rhc app create <app name> mock_standalone_cart-1')
     end
 
     it "should show a thank you message" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Thank you")
+      output.should match("Your client tools are now configured.")
     end
   end
 
@@ -252,26 +252,26 @@ describe RHC::Wizard do
       @wizard.setup_mock_has_git(true)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for git \.\.\. found")
+      output.should match(/Checking for git .*found/)
     end
 
     it "should ask for a namespace" do
       $terminal.write_line("testnamespace")
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for your namespace \.\.\. not found")
+      output.should match(/Checking your namespace .*none/)
     end
 
     it "should show app creation commands" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match 'Below is a list of'
+      output.should match('rhc app create <app name> mock_standalone_cart-1')
     end
 
     it "should show a thank you message" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Thank you")
+      output.should match("Your client tools are now configured")
     end
   end
 
@@ -321,26 +321,26 @@ describe RHC::Wizard do
       @wizard.setup_mock_has_git(true)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for git \.\.\. found")
+      output.should match(/Checking for git .*found/)
     end
 
     it "should ask for a namespace" do
       $terminal.write_line("testnamespace")
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for your namespace \.\.\. not found")
+      output.should match(/Checking your namespace .*none/)
     end
 
     it "should show app creation commands" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match 'Below is a list of'
+      output.should match('rhc app create <app name> mock_standalone_cart-1')
     end
 
     it "should show a thank you message" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Thank you")
+      output.should match("Your client tools are now configured")
     end
   end
 
@@ -401,27 +401,27 @@ describe RHC::Wizard do
       @wizard.setup_mock_has_git(true)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for git \.\.\. found")
+      output.should match(/Checking for git .*found/)
     end
 
     it "should show namespace" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Checking for your namespace ... found namespace:")
+      output.should match(/Checking your namespace/)
       output.should match(@namespace)
     end
 
     it "should list apps" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("test1 - https://test1-#{@namespace}.#{@wizard.libra_server}/")
-      output.should match("test2 - https://test2-#{@namespace}.#{@wizard.libra_server}/")
+      output.should match("test1 https://test1-#{@namespace}.#{@wizard.libra_server}/")
+      output.should match("test2 https://test2-#{@namespace}.#{@wizard.libra_server}/")
     end
 
     it "should show a thank you message" do
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("Thank you")
+      output.should match("Your client tools are now configured")
     end
   end
 
@@ -482,8 +482,8 @@ describe RHC::Wizard do
       @wizard.setup_mock_domain_and_applications(nil, 'test1' => nil, 'test2' => nil)
       @wizard.run_next_stage
       output = $terminal.read
-      output.should match("test1 - no public url")
-      output.should match("test2 - no public url")
+      output.should match("test1")
+      output.should match("test2")
     end
 
   end
@@ -544,12 +544,6 @@ describe RHC::Wizard do
 
   context "Check odds and ends" do
     before(:each) { mock_config }
-
-    it "should cause has_git? to catch an exception and return false" do
-      wizard = FirstRunWizardDriver.new
-      wizard.stub(:git_version_exec){ raise "Fake Exception" }
-      wizard.send(:has_git?).should be_false
-    end
 
     it "should cause ssh_key_upload? to catch NoMethodError and call the fallback to get the fingerprint" do
       wizard = RerunWizardDriver.new

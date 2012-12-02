@@ -2,6 +2,8 @@ require 'coverage_helper'
 require 'webmock/rspec'
 require 'fakefs/safe'
 
+require 'pry' if ENV['PRY']
+
 # chmod isn't implemented in the released fakefs gem
 # but is in git.  Once the git version is released we
 # should remove this and actively check permissions

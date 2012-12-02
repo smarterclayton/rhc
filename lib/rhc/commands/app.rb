@@ -31,7 +31,6 @@ module RHC::Commands
         :dns => true,
         :git => true
 
-      header "Creating application '#{name}'"
       paragraph do
         table({"Namespace:" => options.namespace,
                "Cartridge:" => cartridge,
@@ -41,74 +40,109 @@ module RHC::Commands
              ).each { |s| say "  #{s}" }
       end
 
+      rest_app, rest_domain = nil
       raise RHC::DomainNotFoundException.new("No domains found. Please create a domain with 'rhc domain create <namespace>' before creating applications.") if rest_client.domains.empty?
-
       rest_domain = rest_client.find_domain(options.namespace)
 
-      # check to make sure the right options are set for enabling jenkins
-      jenkins_rest_app = check_jenkins(name, rest_domain) if enable_jenkins?
+      paragraph do
+        say "Creating application '#{name}' ... "
 
-      # create the main app
-      rest_app = create_app(name, cartridge, rest_domain,
-                            options.gear_size, options.scaling)
 
-      # create a jenkins app if not available
-      # don't error out if there are issues, setup warnings instead
-      begin
-        jenkins_rest_app = setup_jenkins_app(rest_domain) if enable_jenkins? and jenkins_rest_app.nil?
-      rescue Exception => e
-        add_issue("Jenkins failed to install - #{e}",
-                  "Installing jenkins and jenkins-client",
-                  "rhc app create jenkins",
-                  "rhc cartridge add jenkins-client -a #{rest_app.name}")
+        # create the main app
+        rest_app = create_app(name, cartridge, rest_domain,
+                              options.gear_size, options.scaling)
+
+        success "done"
       end
 
-      if jenkins_rest_app
-        success, attempts, exit_code, exit_message = false, 1, 157, nil
-        while (!success && exit_code == 157 && attempts < MAX_RETRIES)
-          begin
-            setup_jenkins_client(rest_app)
-            success = true
-          rescue RHC::Rest::ServerErrorException => e
-            if (e.code == 157)
-              # error downloading Jenkins /jnlpJars/jenkins-cli.jar
-              attempts += 1
-              debug "Jenkins server could not be contacted, sleep and then retry: attempt #{attempts}\n    #{e.message}"
-              Kernel.sleep(10)
+      if enable_jenkins? 
+
+        jenkins_app = rest_app.building_app
+
+        unless jenkins_app
+          paragraph do
+            say "Setting up a Jenkins application ... "
+
+            begin
+              jenkins_app = setup_jenkins_app(rest_domain) 
+              success "done"
+
+            rescue Exception => e
+              warn "not complete"
+              add_issue("Jenkins failed to install - #{e}",
+                        "Installing jenkins and jenkins-client",
+                        "rhc app create jenkins",
+                        "rhc cartridge add jenkins-client -a #{rest_app.name}")
             end
-            exit_code = e.code
-            exit_message = e.message
-          rescue Exception => e
-            # timeout and other exceptions
-            exit_code = 1
-            exit_message = e.message
           end
         end
-        add_issue("Jenkins client failed to install - #{exit_message}",
-                  "Install the jenkins client",
-                  "rhc cartridge add jenkins-client -a #{rest_app.name}") if !success
+
+        if jenkins_rest_app
+          paragraph do
+            say "Setting up Jenkins build ... "
+            successful, attempts, exit_code, exit_message = false, 1, 157, nil
+            while (!successful && exit_code == 157 && attempts < MAX_RETRIES)
+              begin
+                setup_jenkins_client(rest_app)
+                successful = true
+                success "done"
+              rescue RHC::Rest::ServerErrorException => e
+                if (e.code == 157)
+                  # error downloading Jenkins /jnlpJars/jenkins-cli.jar
+                  attempts += 1
+                  debug "Jenkins server could not be contacted, sleep and then retry: attempt #{attempts}\n    #{e.message}"
+                  Kernel.sleep(10)
+                end
+                exit_code = e.code
+                exit_message = e.message
+              rescue Exception => e
+                # timeout and other exceptions
+                exit_code = 1
+                exit_message = e.message
+              end
+            end
+            unless successful
+              warn "not complete"
+              add_issue("Jenkins client failed to install - #{exit_message}",
+                        "Install the jenkins client",
+                        "rhc cartridge add jenkins-client -a #{rest_app.name}")
+            end
+          end
+        end
       end
 
       if options.dns
-        say "Your application's domain name is being propagated worldwide (this might take a minute)..."
-        unless dns_propagated? rest_app.host
-          add_issue("We were unable to lookup your hostname (#{rest_app.host}) in a reasonable amount of time and can not clone your application.",
-                    "Clone your git repo",
-                    "rhc git-clone #{rest_app.name}")
+        paragraph do
+          say "Waiting for your DNS name to be available ... "
+          if dns_propagated? rest_app.host
+            success "done"
+          else
+            warn "failure"
+            add_issue("We were unable to lookup your hostname (#{rest_app.host}) in a reasonable amount of time and can not clone your application.",
+                      "Clone your git repo",
+                      "rhc git-clone #{rest_app.name}")
 
-          output_issues(rest_app)
-          return 0
+            output_issues(rest_app)
+            return 0
+          end
         end
 
         if options.git
-          begin
-            git_clone_application(rest_app)
-          rescue RHC::GitException => e
-            warn "#{e}"
-            unless RHC::Helpers.windows? and windows_nslookup_bug?(rest_app)
-              add_issue("We were unable to clone your application's git repo - #{e}",
-                        "Clone your git repo",
-                        "rhc git-clone #{rest_app.name}")
+          paragraph do
+            debug "Checking SSH keys through the wizard"
+            check_sshkeys! unless options.noprompt
+
+            say "Cloning your application Git repository ... "
+            begin
+              git_clone_application(rest_app)
+              self.success "done"
+            rescue RHC::GitException => e
+              warn "#{e}"
+              unless RHC::Helpers.windows? and windows_nslookup_bug?(rest_app)
+                add_issue("We were unable to clone your application's git repo - #{e}",
+                          "Clone your git repo",
+                          "rhc git-clone #{rest_app.name}")
+              end
             end
           end
         end
@@ -141,15 +175,17 @@ module RHC::Commands
     def delete(app)
       rest_domain = rest_client.find_domain(options.namespace)
       rest_app = rest_domain.find_application(app)
-      do_delete = true
 
-      do_delete = agree "Are you sure you wish to delete the '#{rest_app.name}' application? (yes/no)" unless options.confirm
-
-      if do_delete
-        paragraph { say "Deleting application '#{rest_app.name}'" }
-        rest_app.destroy
-        results { say "Application '#{rest_app.name}' successfully deleted" }
+      unless options.confirm
+        paragraph do
+          return 1 unless agree("Are you sure you wish to delete the '#{rest_app.name}' application? [yes|no]: ")
+        end
       end
+
+      say "Deleting application '#{rest_app.name}' ... "
+      rest_app.destroy
+      success "deleted"
+
       0
     end
 
@@ -256,6 +292,10 @@ module RHC::Commands
       include RHC::GitHelpers
       include RHC::CartridgeHelpers
 
+      def check_sshkeys!
+        RHC::SSHWizard.new(rest_client).run
+      end
+
       def standalone_cartridges
         @standalone_cartridges ||= rest_client.cartridges.select{ |c| c.type == 'standalone' }
       end
@@ -281,7 +321,7 @@ module RHC::Commands
       end
 
       def use_cart(cart, for_cartridge_name)
-        info "Using #{cart.name}#{cart.display_name ? " (#{cart.display_name})" : ''} instead of '#{for_cartridge_name}'"
+        info "Using #{cart.name}#{cart.display_name ? " (#{cart.display_name})" : ''} for '#{for_cartridge_name}'"
         cart.name
       end
 

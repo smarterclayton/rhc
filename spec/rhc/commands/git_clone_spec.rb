@@ -15,7 +15,6 @@ describe RHC::Commands::GitClone do
       @instance.stub(:host_exists?) do |host|
         host.match("dnserror") ? false : true
       end
-      @instance.stub(:check_sshkeys!)
       @instance
     end
   end
@@ -51,11 +50,6 @@ describe RHC::Commands::GitClone do
       it { expect { run }.should exit_with_code(0) }
       it { run_output.should match("Cloned") }
 
-      context 'with --noprompt' do
-        let(:arguments) { ['app', 'git-clone', 'app1', '--noprompt'] }
-        before{ @instance.should_not_receive(:check_sshkeys!) }
-        it { expect { run }.should exit_with_code(0) }
-      end
     end
   end
 end

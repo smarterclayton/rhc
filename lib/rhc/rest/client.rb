@@ -57,12 +57,13 @@ module RHC
 
       def add_domain(id)
         debug "Adding domain #{id}"
+        @domains = nil
         rest_method "ADD_DOMAIN", :id => id
       end
 
       def domains
         debug "Getting all domains"
-        rest_method "LIST_DOMAINS"
+        @domains ||= rest_method "LIST_DOMAINS"
       end
 
       def cartridges
