@@ -75,6 +75,9 @@ describe RHC::Helpers do
       older = now - 1*365*24*60
       subject.date(older.strftime(rfc3339)).should =~ /^[A-Z]/
     end
+    it("should handle invalid input") do
+      subject.date('Unknown date').should == 'Unknown date'
+    end
   end
 
   context 'with LIBRA_SERVER environment variable' do
@@ -175,16 +178,23 @@ describe RHC::Helpers do
         true
       end
 
-      it { subject.git_clone_repo("url", "repo").should be_true }
+      it { capture{ subject.git_clone_repo("url", "repo").should be_true } }
       it { capture_all{ subject.git_clone_repo("url", "repo") }.should match("fake git clone") }
 
       context "does not succeed" do
         let(:stderr){ 'fatal: error' }
         let(:exit_status){ 1 }
 
-        it { expect{ subject.git_clone_repo("url", "repo") }.should raise_error(RHC::GitException) }
+        it { capture{ expect{ subject.git_clone_repo("url", "repo") }.should raise_error(RHC::GitException) } }
         it { capture_all{ subject.git_clone_repo("url", "repo") rescue nil }.should match("fake git clone") }
         it { capture_all{ subject.git_clone_repo("url", "repo") rescue nil }.should match("fatal: error") }
+      end
+
+      context "directory is missing" do
+        let(:stderr){ "fatal: destination path 'foo' already exists and is not an empty directory." }
+        let(:exit_status){ 1 }
+
+        it { capture{ expect{ subject.git_clone_repo("url", "repo") }.should raise_error(RHC::GitDirectoryExists) } }
       end
     end
   end
@@ -278,6 +288,16 @@ describe RHC::Helpers do
     def reset
       section {}
     end
+  end
+end
+
+describe RHC::Helpers::StringTee do
+  let(:other){ StringIO.new }
+  subject{ RHC::Helpers::StringTee.new(other) }
+  context "It should copy output" do
+    before{ subject << 'foo' }
+    its(:string) { should == 'foo' }
+    it("should tee to other") { other.string.should == 'foo' }
   end
 end
 

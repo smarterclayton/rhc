@@ -92,8 +92,10 @@ module RHC
       raise "Operations requiring configuration must define a config accessor"
     end
     global_option '--mock', "Run in mock mode", :hide => true do
+      #:nocov:
       require 'rhc/rest/mock'
       RHC::Rest::Mock.start
+      #:nocov:
     end
 
     def openshift_server
@@ -226,14 +228,14 @@ module RHC
       end
     end
 
-    def tee(&block)
-      original = [$stdout, $stderr]
-      $stdout, $stderr = (tees = original.map{ |io| StringTee.new(io) })
-      yield
-    ensure
-      $stdout, $stderr = original
-      tees.each(&:close_write).map(&:string)
-    end
+    #def tee(&block)
+    #  original = [$stdout, $stderr]
+    #  $stdout, $stderr = (tees = original.map{ |io| StringTee.new(io) })
+    #  yield
+    #ensure
+    #  $stdout, $stderr = original
+    #  tees.each(&:close_write).map(&:string)
+    #end
 
     def header(s,opts = {})
       @indent ||= 0

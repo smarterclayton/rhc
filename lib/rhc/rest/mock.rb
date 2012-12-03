@@ -8,6 +8,7 @@ module RHC::Rest::Mock
       d = c.add_domain("test1")
       app = d.add_application('app1', 'carttype1')
       app.cartridges[0].display_name = "A display name"
+      app.add_cartridge('mockcart2')
       app2 = d.add_application('app2', 'carttype2', true)
     end
   end
@@ -343,12 +344,12 @@ module RHC::Rest::Mock
 
   class MockRestCartridge < RHC::Rest::Cartridge
     include Helpers
-    def initialize(name, type, app=nil, properties={:cart_data => {:connection_url => {'name' => 'connection_url', 'value' => "http://fake.url" }}})
+    def initialize(name, type, app=nil, properties=[{'type' => 'cart_data', 'name' => 'connection_url', 'value' => "http://fake.url" }])
       super({})
       @name = name
       @type = type
       @app = app
-      @properties = properties.stringify_keys!
+      @properties = properties.each(&:stringify_keys!)
       @status_messages = [{"message" => "started", "gear_id" => "123"}]
       @scales_from = 1
       @scales_to = 1

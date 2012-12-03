@@ -66,8 +66,10 @@ module RHC
 
       paragraph do
         if RHC::Helpers.windows?
+          #:nocov: TODO: Test block
           system(cmd)
           status = $?.exitstatus
+          #:nocov:
         else
           stdout, stderr = [$stdout, $stderr].map{ |t| RHC::Helpers::StringTee.new(t) }
           status = Open4.spawn(cmd, 'stdout' => stdout, 'stderr' => stderr, 'raise' => false)

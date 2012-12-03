@@ -147,19 +147,6 @@ describe RHC::Commands::App do
     end
   end
 
-  describe 'app create enable-jenkins named after existing app' do
-    let(:arguments) { ['app', 'create', 'app1', 'mock_unique_standalone_cart', '--trace', '--enable-jenkins', 'app2', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
-
-    context 'when run' do
-      before(:each) do
-        @rc = MockRestClient.new
-        domain = @rc.add_domain("mockdomain")
-        domain.add_application("app2", "mock_unique_standalone_cart")
-      end
-      it { expect { run }.should raise_error(ArgumentError, /You have named your Jenkins application the same as an existing application/) }
-    end
-  end
-
   describe 'app create jenkins fails to install warnings' do
     let(:arguments) { ['app', 'create', 'app1', 'mock_unique_standalone_cart', '--enable-jenkins', '--noprompt', '--config', 'test.conf', '-l', 'test@test.foo', '-p',  'password'] }
 

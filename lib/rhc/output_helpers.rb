@@ -60,10 +60,12 @@ module RHC
 
     def display_included_carts(carts)
       carts.each do |c|
-        say_table \
-          format_cart_header(c),
-          get_properties(c, :scaling, :connection_info),
-          :delete => true
+        section(:bottom => 1) do
+          say_table \
+            format_cart_header(c),
+            get_properties(c, :scaling, :connection_info),
+            :delete => true
+        end
       end
     end
 
