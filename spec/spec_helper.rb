@@ -13,7 +13,7 @@ class FakeFS::File
   end
 
   # FakeFS incorrectly assigns this to '/'
-  remove_const(:PATH_SEPARATOR)
+  remove_const(:PATH_SEPARATOR) rescue nil
   const_set(:PATH_SEPARATOR, ":")
 
   def self.executable?(path)
