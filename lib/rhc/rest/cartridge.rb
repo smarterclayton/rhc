@@ -13,6 +13,15 @@ module RHC
         attribute(:display_name) || name
       end
 
+      def scaling
+        {
+          :current_scale => current_scale,
+          :scales_from => scales_from,
+          :scales_to => scales_to,
+          :gear_profile => gear_profile
+        } if scalable?
+      end
+
       def property(type, key)
         key, type = key.to_s, type.to_s
         properties.select{ |p| p['type'] == type }.find{ |p| p['name'] == key } ||

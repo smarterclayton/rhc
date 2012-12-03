@@ -8,6 +8,7 @@ module RHC::Rest::Mock
       d = c.add_domain("test1")
       app = d.add_application('app1', 'carttype1')
       app.cartridges[0].display_name = "A display name"
+      app2 = d.add_application('app2', 'carttype2', true)
     end
   end
 
@@ -273,7 +274,7 @@ module RHC::Rest::Mock
       @name = name
       @domain = domain
       @cartridges = []
-      @creation_time = "now"
+      @creation_time = Date.new(2000, 1, 1).strftime('%Y-%m-%dT%H:%M:%S%z')
       @uuid = fakeuuid
       @git_url = "git:fake.foo/git/#{@name}.git"
       @app_url = "https://#{@name}-#{@domain.id}.fake.foo/"

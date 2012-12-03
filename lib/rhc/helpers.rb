@@ -50,7 +50,7 @@ module RHC
       if now.year == d.year
         return d.strftime('%l:%M %p').strip if now.yday == d.yday
       end
-      d.strftime('%b %d %l:%M %p')
+      d.strftime('%b %d, %Y %l:%M %p')
     rescue ArgumentError
       "Unknown date"
     end
