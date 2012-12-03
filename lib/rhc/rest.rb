@@ -161,7 +161,6 @@ module RHC
       begin
         debug "Request: #{request.inspect}" if debug?
         response = request.execute
-        debug "Response: #{response}" if debug?
         #set cookie
         rh_sso = response.cookies['rh_sso']
         if not rh_sso.nil?
@@ -191,6 +190,8 @@ module RHC
         logger.debug e.backtrace.join("\n  ") if debug?
         raise ResourceAccessException.new(
           "Failed to access resource: #{e.message}")
+      ensure
+        debug "Response: #{response}" if debug?
       end
     end
 

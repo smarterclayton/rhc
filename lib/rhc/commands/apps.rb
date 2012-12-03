@@ -15,6 +15,7 @@ module RHC::Commands
         info "No applications. Use 'rhc app create'." and
         return 1
 
+      success "You have #{applications.length} applications"
       0
     end
   end

@@ -120,10 +120,10 @@ module RHC
         # Make sure we nest properly
         if heading
           header heading do
-            table.each{ |s| indent s }
+            say table
           end
         else
-          table.each{ |s| indent s }
+          say table
         end
       end
 

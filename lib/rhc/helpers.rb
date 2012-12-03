@@ -138,19 +138,39 @@ module RHC
     end
 
     @@indent = 0
+    @@last_line_open = false
     def say(msg, *args)
       @@section_bottom_last ||= 0
-      if Hash[*args][:stderr]
-        begin
-          out = $terminal.instance_variable_get(:@output)
-          $terminal.instance_variable_set(:@output, $stderr)
-          Array(msg).each{ |s| super "#{' ' * @@indent}#{s}" }
-        ensure
-          $terminal.instance_variable_set(:@output, out)
-        end
-      else
-        Array(msg).each{ |s| super "#{' ' * @@indent}#{s}" }
+
+      output = Hash[*args][:stderr] ? $stderr : $terminal.instance_variable_get(:@output)
+
+      if @@margin > 0
+        output.print "\n" * @@margin
+        @@margin = 0
       end
+
+      Array(msg).each do |statement|
+        statement = statement.to_str
+        return unless statement.length > 0
+
+        template  = ERB.new(statement, nil, "%")
+        statement = template.result(binding)
+
+        statement = wrap(statement) unless @wrap_at.nil?
+        statement = page_print(statement) unless @page_at.nil?
+
+        output.print(' ' * @@indent * INDENT) unless @@last_line_open
+
+        if statement[-1, 1] == " " or statement[-1, 1] == "\t"
+          output.print(statement)
+          output.flush
+          @@last_line_open = true
+        else
+          output.puts(statement)
+          @@last_line_open = false
+        end
+      end
+
       msg
     end
 
@@ -247,9 +267,7 @@ module RHC
     #end
 
     def header(s,opts = {}, &block)
-      @indent ||= 0
-      indent s
-      indent "="*s.length
+      say [s, "="*s.length]
       if block_given?
         indent(nil, &block)
       end
@@ -299,37 +317,23 @@ module RHC
     #  bottom - bottom margin specified in line
     #
     @@section_bottom_last = nil
+    @@margin = 0
     def section(params={}, &block)
-      top = params[:top]
-      top = 0 if top.nil?
-      bottom = params[:bottom]
-      bottom = 0 if bottom.nil?
+      top = params[:top] || 0
+      bottom = params[:bottom] || 0
 
       # the first section cannot take a newline
       top = 0 if @@section_bottom_last.nil?
 
-      # add more newlines if top is greater than the last section's bottom margin
-      top_margin = @@section_bottom_last || 0
-
-      # negitive previous bottoms indicate that an untracked newline was
-      # printed and so we do our best to negate it since we can't remove it
-      if top_margin < 0
-        top += top_margin
-        top_margin = 0
-      end
-
-      until top_margin >= top
-        say "\n"
-        top_margin += 1
-      end
-
+      @@margin = [top, @@margin].max
       block.call
-
-      bottom_margin = 0
-      until bottom_margin >= bottom
-        say "\n"
-        bottom_margin += 1
-      end
+      say '\n' if @@last_line_open
+      @@margin = [bottom, @@margin].max
+      #bottom_margin = 0
+      #until bottom_margin >= bottom
+      #  say "\n"
+      #  bottom_margin += 1
+      #end
 
       @@section_bottom_last = bottom
     end
