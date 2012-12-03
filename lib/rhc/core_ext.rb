@@ -25,14 +25,14 @@ class File
   end
 end
 
-class String
+#class String
   # Wrap string by the given length, and join it with the given character.
   # The method doesn't distinguish between words, it will only work based on
   # the length.
-  def wrap(wrap_length=80, char="\n")
-    scan(/.{#{wrap_length}}|.+/).join(char)
-  end
-end
+  #def wrap(wrap_length=80, char="\n")
+  #  scan(/.{#{wrap_length}}|.+/).join(char)
+  #end
+#end
 
 #
 # Allow http => https redirection, see 
@@ -75,6 +75,27 @@ end
 # Fixes BZ 866530.
 class HighLine
 
+  def wrap( text )
+    wrapped = [ ]
+    text.each_line do |line|
+      # take into account color escape sequences when wrapping
+      wrap_at = @wrap_at + (line.length - actual_length(line))
+      while line =~ /([^\n]{#{wrap_at + 1},})/
+        search  = $1.dup
+        replace = $1.dup
+        if index = replace.rindex(" ", wrap_at)
+          replace[index, 1] = "\n"
+          replace.sub!(/\n[ \t]+/, "\n")
+          line.sub!(search, replace)
+        else
+          line[$~.begin(1) + wrap_at, 0] = "\n"
+        end
+      end
+      wrapped << line
+    end
+    return wrapped.join
+  end
+OLD = <<EOS
   def wrap_line(line)
     wrapped_line = []
     i = chars_in_line = 0
@@ -144,5 +165,5 @@ class HighLine
 
     return wrapped_text.join("\n")
   end
-
+EOS
 end

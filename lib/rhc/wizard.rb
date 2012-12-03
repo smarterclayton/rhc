@@ -78,7 +78,7 @@ module RHC
           end
         end
 
-        @password = RHC::Config.password
+        @password = @opts.password if @opts
         @password = ask("Password: ") { |q| q.echo = '*' } if @password.nil?
       end
 
@@ -293,9 +293,11 @@ public and private keys id_rsa keys.
         success "found #{apps.length}"
 
         paragraph do
-          say table(apps.map do |app|
-            [app.name, app.app_url]
-          end).join("\n")
+          indent do
+            say table(apps.map do |app|
+              [app.name, app.app_url]
+            end)
+          end
         end
       else
         info "none"

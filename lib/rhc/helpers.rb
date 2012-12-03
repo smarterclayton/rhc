@@ -45,12 +45,14 @@ module RHC
     end
 
     def date(s)
-      now = Time.now
+      now = Date.today
       d = datetime_rfc3339(s)
       if now.year == d.year
         return d.strftime('%l:%M %p').strip if now.yday == d.yday
+        d.strftime('%b %d %l:%M %p')
+      else
+        d.strftime('%b %d, %Y %l:%M %p')
       end
-      d.strftime('%b %d, %Y %l:%M %p')
     rescue ArgumentError
       "Unknown date"
     end
@@ -135,12 +137,19 @@ module RHC
       warn "Warning: #{msg}\n" % ['a warning','an error',1]
     end
 
+    @@indent = 0
     def say(msg, *args)
       @@section_bottom_last ||= 0
       if Hash[*args][:stderr]
-        $stderr.puts msg
+        begin
+          out = $terminal.instance_variable_get(:@output)
+          $terminal.instance_variable_set(:@output, $stderr)
+          Array(msg).each{ |s| super "#{' ' * @@indent}#{s}" }
+        ensure
+          $terminal.instance_variable_set(:@output, out)
+        end
       else
-        super(msg)
+        Array(msg).each{ |s| super "#{' ' * @@indent}#{s}" }
       end
       msg
     end
@@ -237,21 +246,28 @@ module RHC
     #  tees.each(&:close_write).map(&:string)
     #end
 
-    def header(s,opts = {})
+    def header(s,opts = {}, &block)
       @indent ||= 0
       indent s
       indent "="*s.length
       if block_given?
-        @indent += 1
-        yield
-        @indent -= 1
+        indent(nil, &block)
       end
     end
 
     INDENT = 2
-    def indent(str)
-      @indent ||= 0
-      say "%s%s" % [" " * @indent * INDENT,str]
+    def indent(str=nil, &block)
+      if block_given?
+        @@indent += 1
+        begin
+          yield
+        ensure
+          @@indent -= 1
+        end
+      else
+        @indent ||= 0
+        say "%s%s" % [" " * @indent * INDENT,str]
+      end
     end
 
     ##
