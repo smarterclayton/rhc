@@ -179,7 +179,7 @@ server at #{URI.parse(@end_point).host} supports #{@server_api_versions.join(', 
           warn "The client version may be outdated; please consider updating 'rhc'. We will continue, but you may encounter problems."
         end
       end
-      
+
       def debug?
         @debug
       end

@@ -14,7 +14,7 @@ module RHC
 
     class Exception < RuntimeError
       attr_reader :code
-      def initialize(message=nil, code=nil)
+      def initialize(message=nil, code=1)
         super(message)
         @code = (Integer(code) rescue code)
       end
@@ -194,13 +194,11 @@ module RHC
       end
     end
 
-    def generic_error(url)
-      ServerErrorException.new(
-        "The server did not respond correctly. This may be an issue "\
-        "with the server configuration or with your connection to the "\
-        "server (such as a Web proxy or firewall)."\
-        "#{RestClient.proxy.present? ? " Please verify that your proxy server is working correctly (#{RestClient.proxy}) and that you can access the OpenShift server #{url}" : "Please verify that you can access the OpenShift server #{url}"}",
-        129)
+    def generic_error_message(url)
+      "The server did not respond correctly. This may be an issue "\
+      "with the server configuration or with your connection to the "\
+      "server (such as a Web proxy or firewall)."\
+      "#{RestClient.proxy.present? ? " Please verify that your proxy server is working correctly (#{RestClient.proxy}) and that you can access the OpenShift server #{url}" : "Please verify that you can access the OpenShift server #{url}"}"
     end
 
     def process_error_response(response, url=nil)
@@ -211,7 +209,7 @@ module RHC
         messages = Array(result['messages'])
       rescue => e
         logger.debug "Response did not include a message from server: #{e.message}" if debug?
-        parse_error = generic_error(url)
+        parse_error = ServerErrorException.new(generic_error_message(url), 129)
       end
       case response.code
       when 401
@@ -229,7 +227,7 @@ module RHC
             raise ResourceNotFoundException, message['text']
           end
         end
-        raise ResourceNotFoundException.new(url)
+        raise ResourceNotFoundException, generic_error_message(url)
       when 409
         messages.each do |message|
           if message['severity'] and message['severity'].upcase == "ERROR"
@@ -264,11 +262,11 @@ module RHC
             raise ServiceUnavailableException, message['text']
           end
         end
-        raise ServiceUnavailableException
+        raise ServiceUnavailableException, generic_error_message(url)
       else
         raise ServerErrorException, "Server returned an unexpected error code: #{response.code}"
       end
-      raise parse_error || generic_error(url)
+      raise parse_error || ServerErrorException.new(generic_error_message(url), 129)
     end
   end
 end

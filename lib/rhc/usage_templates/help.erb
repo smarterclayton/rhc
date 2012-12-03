@@ -3,7 +3,7 @@ Usage: rhc [--help] [--version] [--debug] <command> [<args>]
 <%= Array(program :description).first %>
 
 <%
-remaining = @commands.dup.select{ |name, command| not alias?(name) and not command.summary.blank? }
+remaining = Hash[@commands.dup.select{ |name, command| not alias?(name) and not command.summary.blank? }]
 basic = remaining.slice!('setup', 'app create', 'apps', 'cartridge list', 'cartridge add', 'server')
 begin -%>
 Getting started:

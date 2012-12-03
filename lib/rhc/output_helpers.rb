@@ -78,7 +78,7 @@ module RHC
 
     def format_scaling_info(scaling)
       "x%d (minimum: %s, maximum: %s) on %s gears" %
-        scaling.map{ |(key,value)| format_value(key, value) } if scaling
+        [:current_scale, :scales_from, :scales_to, :gear_profile].map{ |key| format_value(key, scaling[key]) } if scaling
     end
 
     #---------------------------
@@ -110,9 +110,9 @@ module RHC
         @table_displayed = true
 
         values = values.to_a if values.is_a? Hash
-        values.select! do |arr|
+        values.delete_if do |arr|
           arr[0] = "#{table_heading(arr.first)}:" if arr[0].is_a? Symbol
-          !opts[:delete] || arr.last.present?
+          opts[:delete] and arr.last.blank?
         end
 
         table = self.table(values)

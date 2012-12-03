@@ -62,7 +62,7 @@ class Hash
     end
     self
   end
-  def slice!(*args, &block)
+  def slice!(*args)
     s = []
     args.inject([]) do |a, k|
       s << [k, delete(k)] if has_key?(k)
