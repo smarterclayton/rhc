@@ -45,17 +45,20 @@ module RHC::Commands
     def show
       domain = rest_client.domains.first
 
-      say "In order to deploy applications, you must create a domain with 'rhc setup' or 'rhc domain create'." and return 1 unless domain
+      warn "In order to deploy applications, you must create a domain with 'rhc setup' or 'rhc domain create'." and return 1 unless domain
 
       applications = domain.applications
 
-      header "Applications belonging to you in #{domain.id}" do
-        applications.each do |a|
-          display_app(a,a.cartridges)
-        end.blank? and say "No applications exist in this domain. You can use 'rhc app create' to create a new application." and return 0
+      if applications.present?
+        header "Applications in #{domain.id} domain" do
+          applications.each do |a|
+            display_app(a,a.cartridges)
+          end
+        end
+        success "You have #{applications.length} applications in your domain."
+      else
+        success "The domain #{domain.id} exists but has no applications. You can use 'rhc app create' to create a new application."
       end
-
-      success "You have #{applications.length} applications in your domain."
 
       0
     end

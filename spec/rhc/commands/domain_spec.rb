@@ -13,7 +13,7 @@ describe RHC::Commands::Domain do
       before(:each) do
         @rc = MockRestClient.new
       end
-      it { expect { run }.should exit_with_code(0) }
+      it { expect { run }.should exit_with_code(1) }
       it { run_output.should match(/In order to deploy applications.*rhc domain create/) }
     end
     context 'when help is shown' do
@@ -30,7 +30,7 @@ describe RHC::Commands::Domain do
       before(:each) do
         @rc = MockRestClient.new
       end
-      it { expect { run }.should exit_with_code(0) }
+      it { expect { run }.should exit_with_code(1) }
       it { run_output.should match(/In order to deploy applications.*rhc domain create/) }
     end
 
@@ -42,8 +42,7 @@ describe RHC::Commands::Domain do
       it { expect { run }.should exit_with_code(0) }
       it "should match output" do
         output = run_output
-        output.should match(/Applications in onedomain/)
-        output.should match(/No applications exist in this domain.*rhc app create/)
+        output.should match("The domain onedomain exists but has no applications. You can use")
       end
     end
 
@@ -56,7 +55,7 @@ describe RHC::Commands::Domain do
       it { expect { run }.should exit_with_code(0) }
       it "should match output" do
         output = run_output
-        output.should match("Applications in firstdomain")
+        output.should match("The domain firstdomain exists but has no applications. You can use")
         output.should_not match("Applications in seconddomain")
       end
     end

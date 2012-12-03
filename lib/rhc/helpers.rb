@@ -142,16 +142,18 @@ module RHC
     def say(msg, *args)
       @@section_bottom_last ||= 0
 
-      output = Hash[*args][:stderr] ? $stderr : $terminal.instance_variable_get(:@output)
+      return unless msg.length > 0
 
-      if @@margin > 0
-        output.print "\n" * @@margin
-        @@margin = 0
-      end
+      output = if Hash[*args][:stderr]
+          $stderr
+        else
+          separate_blocks
+          $terminal.instance_variable_get(:@output)
+        end
+
 
       Array(msg).each do |statement|
         statement = statement.to_str
-        return unless statement.length > 0
 
         template  = ERB.new(statement, nil, "%")
         statement = template.result(binding)
@@ -161,17 +163,21 @@ module RHC
 
         output.print(' ' * @@indent * INDENT) unless @@last_line_open
 
-        if statement[-1, 1] == " " or statement[-1, 1] == "\t"
-          output.print(statement)
-          output.flush
-          @@last_line_open = true
-        else
-          output.puts(statement)
-          @@last_line_open = false
-        end
+        @@last_line_open = 
+          if statement[-1, 1] == " " or statement[-1, 1] == "\t"
+            output.print(statement)
+            output.flush
+          else
+            output.puts(statement)
+          end
       end
 
       msg
+    end
+
+    def ask(*args)
+      separate_blocks
+      super
     end
 
     def success(msg, *args)
@@ -269,22 +275,17 @@ module RHC
     def header(s,opts = {}, &block)
       say [s, "="*s.length]
       if block_given?
-        indent(nil, &block)
+        indent &block
       end
     end
 
     INDENT = 2
-    def indent(str=nil, &block)
-      if block_given?
-        @@indent += 1
-        begin
-          yield
-        ensure
-          @@indent -= 1
-        end
-      else
-        @indent ||= 0
-        say "%s%s" % [" " * @indent * INDENT,str]
+    def indent(&block)
+      @@indent += 1
+      begin
+        yield
+      ensure
+        @@indent -= 1
       end
     end
 
@@ -323,11 +324,12 @@ module RHC
       bottom = params[:bottom] || 0
 
       # the first section cannot take a newline
-      top = 0 if @@section_bottom_last.nil?
+      top = 0 unless @@margin
+      @@margin = [top, @@margin || 0].max
 
-      @@margin = [top, @@margin].max
       block.call
-      say '\n' if @@last_line_open
+
+      say "\n" if @@last_line_open
       @@margin = [bottom, @@margin].max
       #bottom_margin = 0
       #until bottom_margin >= bottom
@@ -385,5 +387,14 @@ Fingerprint: <%= key.fingerprint %>
       dns.getresources(host, Resolv::DNS::Resource::IN::A).any?
       # :nocov:
     end
+
+    private
+
+      def separate_blocks
+        if @@margin && @@margin > 0 && !@@last_line_open
+          $terminal.instance_variable_get(:@output).print "\n" * @@margin
+          @@margin = 0
+        end
+      end
   end
 end

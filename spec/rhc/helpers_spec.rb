@@ -111,9 +111,16 @@ describe RHC::Helpers do
   end
 
   context "Formatter" do
+    before{ tests.reset }
+
+    it "should print out a paragraph with open endline on the same line" do
+      tests.section_same_line
+      $terminal.read.should == "section 1 word\n"
+    end
+
     it "should print out a section without any line breaks" do
       tests.section_no_breaks
-      $terminal.read.should == "section 1 "
+      $terminal.read.should == "section 1 \n"
     end
 
     it "should print out a section with trailing line break" do
@@ -136,9 +143,9 @@ describe RHC::Helpers do
       $terminal.read.should == "section 1\n\n\nsection 2\n"
     end
 
-    it "should print out 4 sections with the middle two on the same line and a space between the lines" do
+    it "should print out 4 sections and not collapse open sections" do
       tests.sections_four_on_three_lines
-      $terminal.read.should == "section 1\n\nsection 2 section 3\n\nsection 4\n"
+      $terminal.read.should == "section 1\n\nsection 2 \nsection 3\n\nsection 4\n"
     end
 
     it "should show the equivilance of paragaph to section(:top => 1, :bottom => 1)" do
@@ -154,12 +161,12 @@ describe RHC::Helpers do
       tests.section_1_1
       tests.section_paragraph
 
-      $terminal.read.should == "\nsection\n\nsection\n\n"
+      $terminal.read.should == "section\n\nsection\n"
     end
 
-    it "should show two line with one space between even though an outside newline was printed" do
+    it "should not collapse explicit newline sections" do
       tests.outside_newline
-      $terminal.read.should == "section 1\n\nsection 2\n"
+      $terminal.read.should == "section 1\n\n\nsection 2\n"
     end
   end
 
@@ -242,6 +249,10 @@ describe RHC::Helpers do
     def output_no_breaks
       say "section #{next_print_num} "
     end
+    
+    def section_same_line
+      section { output_no_breaks; say 'word' }
+    end
 
     def section_no_breaks
       section { output_no_breaks }
@@ -289,7 +300,7 @@ describe RHC::Helpers do
 
     # call section without output to reset spacing to 0
     def reset
-      section {}
+      RHC::Helpers.send(:class_variable_set, :@@margin, nil)
     end
   end
 end

@@ -285,32 +285,33 @@ public and private keys id_rsa keys.
     end
 
     def show_app_info_stage
-      section{ say "Checking for applications ... " }
+      section do
+        say "Checking for applications ... "
 
-      apps = @rest_client.domains.map(&:applications).flatten
+        apps = @rest_client.domains.map(&:applications).flatten
 
-      if !apps.nil? and !apps.empty?
-        success "found #{apps.length}"
+        if !apps.nil? and !apps.empty?
+          success "found #{apps.length}"
 
-        paragraph do
-          indent do
-            say table(apps.map do |app|
-              [app.name, app.app_url]
-            end)
+          paragraph do
+            indent do
+              say table(apps.map do |app|
+                [app.name, app.app_url]
+              end)
+            end
+          end
+        else
+          info "none"
+
+          paragraph{ say "Run 'rhc app create' to create your first application." }
+          paragraph do
+            application_types = @rest_client.find_cartridges :type => "standalone"
+            say table(application_types.sort {|a,b| a.display_name <=> b.display_name }.map do |cart|
+              [' ', cart.display_name, "rhc app create <app name> #{cart.name}"]
+            end).join("\n")
           end
         end
-      else
-        info "none"
-
-        paragraph{ say "Run 'rhc app create' to create your first application." }
-        paragraph do
-          application_types = @rest_client.find_cartridges :type => "standalone"
-          say table(application_types.sort {|a,b| a.display_name <=> b.display_name }.map do |cart|
-            [' ', cart.display_name, "rhc app create <app name> #{cart.name}"]
-          end).join("\n")
-        end
       end
-
       true
     end
 
@@ -369,16 +370,20 @@ public and private keys id_rsa keys.
       end
     end
 
-    def generic_unix_install_check(show_action=true)
-      section(:top => 1) { say "Checking for git ... " } if show_action
-      if has_git?
-        section(:bottom => 1) { success("found #{git_version}") rescue success('found') }
-      else
-        section(:bottom => 1) { warn "needs to be installed" }
-        paragraph do
-          say "Automated installation of client tools is not supported for " \
-              "your platform. You will need to manually install git for full " \
-              "OpenShift functionality."
+    def generic_unix_install_check
+      paragraph do 
+        say "Checking for git ... "
+
+        if has_git?
+          success("found #{git_version}") rescue success('found')
+        else
+          warn "needs to be installed"
+
+          paragraph do
+            say "Automated installation of client tools is not supported for " \
+                "your platform. You will need to manually install git for full " \
+                "OpenShift functionality."
+          end
         end
       end
     end
