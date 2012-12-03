@@ -348,12 +348,12 @@ describe HighLine do
     output = $terminal.read
     output.should match "Lorem ipsum dolor sit amet"
   end
-#  it "should wrap the terminal when using color codes" do
-#    $terminal.wrap_at = 10
-#    say $terminal.color("Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet", :red)
-#    output = $terminal.read
-#    output.should match "Lorem\nipsum\ndolor sit\namet Lorem\nipsum\ndolor sit\namet"
-#  end
+  it "should wrap the terminal when using color codes" do
+    $terminal.wrap_at = 10
+    say $terminal.color("Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet", :red)
+    output = $terminal.read
+    output.should match "Lorem\nipsum\ndolor sit\namet Lorem\nipsum\ndolor sit\namet"
+  end
   it "should wrap the terminal with other escape characters" do
     $terminal.wrap_at = 10
     say "Lorem ipsum dolor sit am\eet"
