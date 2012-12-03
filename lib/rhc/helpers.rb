@@ -207,6 +207,7 @@ module RHC
         :scales_to      => "Maximum",
         :url            => "URL",
         :ssh_string     => "SSH",
+        :connection_info => "Connection URL",
         :gear_profile   => "Gear Size"
       })
 

@@ -40,10 +40,10 @@ describe RHC::Helpers do
   it("should decode json"){ subject.decode_json("{\"a\" : 1}").should == {'a' => 1} }
 
   it("should output green on success") do
-    capture{ subject.success 'this is green' }.should == "\e[32mthis is green\e[0m"
+    capture{ subject.success 'this is green' }.should == "\e[32mthis is green\e[0m\n"
   end
   it("should output yellow on warn") do
-    capture{ subject.success 'this is yellow' }.should == "\e[32mthis is yellow\e[0m"
+    capture{ subject.success 'this is yellow' }.should == "\e[32mthis is yellow\e[0m\n"
   end
   it("should return true on success"){ subject.success('anything').should be_true }
   it("should return true on success"){ subject.warn('anything').should be_true }
@@ -54,8 +54,6 @@ describe RHC::Helpers do
     end.should == ['10 2','3  40']
   end
 
-  it("should generate table rows"){ subject.send(:make_table, [1,2]).should == [1,2] }
-  it("should generate a table"){ subject.send(:make_table, 1).should == [1] }
   it("should output a table") do 
     subject.send(:display_no_info, 'test').should == ['This test has no information to show']
   end
@@ -160,9 +158,35 @@ describe RHC::Helpers do
   end
 
   context "Git Helpers" do
-    subject{ Class.new(Object){ include RHC::GitHelpers }.new }
+    subject{ Class.new(Object){ include RHC::Helpers; include RHC::GitHelpers; def debug?; false; end }.new }
     before{ subject.stub(:git_version){ raise "Fake Exception" } }
     its(:has_git?) { should be_false }
+
+    context "git clone repo" do
+      let(:stdout){ 'fake git clone' }
+      let(:exit_status){ 0 }
+      let!(:spawn) do
+        out, err = stdout, stderr
+        Open4.should_receive(:spawn).and_return(exit_status) do |cmd, opts|
+          opts['stdout'] << out if out
+          opts['stderr'] << err if err
+          exit_status
+        end
+        true
+      end
+
+      it { subject.git_clone_repo("url", "repo").should be_true }
+      it { capture_all{ subject.git_clone_repo("url", "repo") }.should match("fake git clone") }
+
+      context "does not succeed" do
+        let(:stderr){ 'fatal: error' }
+        let(:exit_status){ 1 }
+
+        it { expect{ subject.git_clone_repo("url", "repo") }.should raise_error(RHC::GitException) }
+        it { capture_all{ subject.git_clone_repo("url", "repo") rescue nil }.should match("fake git clone") }
+        it { capture_all{ subject.git_clone_repo("url", "repo") rescue nil }.should match("fatal: error") }
+      end
+    end
   end
 
   context "SSH Key Helpers" do

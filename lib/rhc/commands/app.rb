@@ -40,6 +40,8 @@ module RHC::Commands
              ).each { |s| say "  #{s}" }
       end
 
+      raise ArgumentError, "You have named both your main application and your Jenkins application '#{name}'. In order to continue you'll need to specify a different name with --enable-jenkins or choose a different application name." if jenkins_app_name == name
+
       rest_app, rest_domain = nil
       raise RHC::DomainNotFoundException.new("No domains found. Please create a domain with 'rhc domain create <namespace>' before creating applications.") if rest_client.domains.empty?
       rest_domain = rest_client.find_domain(options.namespace)
@@ -67,7 +69,7 @@ module RHC::Commands
             say "Setting up a Jenkins application ... "
 
             begin
-              build_app_exists = create_app(jenkins_app_name, "jenkins-1.4", rest_domain)
+              build_app_exists = add_jenkins_app(rest_domain)
 
               success "done"
               messages.concat(build_app_exists.messages)
@@ -82,41 +84,9 @@ module RHC::Commands
           end
         end
 
-        if build_app_exists
-          paragraph do
-            say "Setting up Jenkins build ... "
-            successful, attempts, exit_code, exit_message = false, 1, 157, nil
-            while (!successful && exit_code == 157 && attempts < MAX_RETRIES)
-              begin
-                cartridge = rest_app.add_cartridge("jenkins-client-1.4", 300)
-                successful = true
-
-                success "done"
-                messages.concat(cartridge.messages)
-
-              rescue RHC::Rest::ServerErrorException => e
-                if (e.code == 157)
-                  # error downloading Jenkins /jnlpJars/jenkins-cli.jar
-                  attempts += 1
-                  debug "Jenkins server could not be contacted, sleep and then retry: attempt #{attempts}\n    #{e.message}"
-                  Kernel.sleep(10)
-                end
-                exit_code = e.code
-                exit_message = e.message
-              rescue Exception => e
-                # timeout and other exceptions
-                exit_code = 1
-                exit_message = e.message
-              end
-            end
-            unless successful
-              warn "not complete"
-              add_issue("Jenkins client failed to install - #{exit_message}",
-                        "Install the jenkins client",
-                        "rhc cartridge add jenkins-client -a #{rest_app.name}")
-            end
-          end
-        end
+        paragraph do
+          add_jenkins_client_to(rest_app, messages)
+        end if build_app_exists
       end
 
       if options.dns
@@ -361,6 +331,48 @@ module RHC::Commands
           paragraph{ list_cartridges }
         end
         raise
+      end
+
+      def add_jenkins_app(rest_domain)
+        create_app(jenkins_app_name, "jenkins-1.4", rest_domain)
+      end
+
+      def add_jenkins_cartridge(rest_app)
+        rest_app.add_cartridge("jenkins-client-1.4", 300)
+      end
+
+      def add_jenkins_client_to(rest_app, messages)
+        say "Setting up Jenkins build ... "
+        successful, attempts, exit_code, exit_message = false, 1, 157, nil
+        while (!successful && exit_code == 157 && attempts < MAX_RETRIES)
+          begin
+            cartridge = add_jenkins_cartridge(rest_app)
+            successful = true
+
+            success "done"
+            messages.concat(cartridge.messages)
+
+          rescue RHC::Rest::ServerErrorException => e
+            if (e.code == 157)
+              # error downloading Jenkins /jnlpJars/jenkins-cli.jar
+              attempts += 1
+              debug "Jenkins server could not be contacted, sleep and then retry: attempt #{attempts}\n    #{e.message}"
+              Kernel.sleep(10)
+            end
+            exit_code = e.code
+            exit_message = e.message
+          rescue Exception => e
+            # timeout and other exceptions
+            exit_code = 1
+            exit_message = e.message
+          end
+        end
+        unless successful
+          warn "not complete"
+          add_issue("Jenkins client failed to install - #{exit_message}",
+                    "Install the jenkins client",
+                    "rhc cartridge add jenkins-client -a #{rest_app.name}")
+        end
       end
 
       def dns_propagated?(host, sleep_time=2)

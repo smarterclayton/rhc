@@ -57,8 +57,8 @@ module RHC
     def git_clone_repo(git_url, repo_dir)
       # quote the repo to avoid input injection risk
       destination = (repo_dir ? " \"#{repo_dir}\"" : "")
-      clone_cmd = "git clone #{git_url}#{destination}"
-      debug "Running #{clone_cmd}"
+      cmd = "git clone #{git_url}#{destination}"
+      debug "Running #{cmd}"
 
       say "Calling 'git clone #{git_url}'"
 
@@ -66,16 +66,16 @@ module RHC
 
       paragraph do
         if RHC::Helpers.windows?
-          system(clone_cmd)
+          system(cmd)
           status = $?.exitstatus
         else
           stdout, stderr = [$stdout, $stderr].map{ |t| RHC::Helpers::StringTee.new(t) }
-          status = Open4::spawn(cmd, 'stdout' => stdout, 'stderr' => stderr, 'raise' => false)
+          status = Open4.spawn(cmd, 'stdout' => stdout, 'stderr' => stderr, 'raise' => false)
           stdout, stderr = [stdout, stderr].map(&:string)
         end
       end
 
-      if status
+      if status != 0
         case stderr
         when /fatal: destination path '[^']*' already exists and is not an empty directory./
           raise RHC::GitDirectoryExists, "The directory you are cloning into already exists."

@@ -1,4 +1,5 @@
 require 'rhc/rest/base'
+require 'pp'
 
 module RHC
   module Rest
@@ -24,8 +25,7 @@ module RHC
 
       def property(type, key)
         key, type = key.to_s, type.to_s
-        properties.select{ |p| p['type'] == type }.find{ |p| p['name'] == key } ||
-          (properties[type] || {})[key]
+        properties.select{ |p| p['type'] == type }.find{ |p| p['name'] == key }
       end
 
       def status

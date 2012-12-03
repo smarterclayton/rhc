@@ -114,7 +114,7 @@ describe RHC::Commands::App do
         @rc = MockRestClient.new
         domain = @rc.add_domain("mockdomain")
       end
-      it { expect { run }.should raise_error(ArgumentError, /The --no-dns option can't be used in conjunction with --enable-jenkins/) }
+      it { expect { run }.should_not raise_error(ArgumentError, /The --no-dns option can't be used in conjunction with --enable-jenkins/) }
     end
   end
 
@@ -170,7 +170,7 @@ describe RHC::Commands::App do
 
     context 'when run with error in jenkins setup' do
       before(:each) do
-        @instance.stub(:setup_jenkins_app) { raise Exception }
+        @instance.stub(:add_jenkins_app) { raise Exception }
       end
       it "should print out jenkins warning" do
         run_output.should match("Jenkins failed to install")
@@ -179,7 +179,7 @@ describe RHC::Commands::App do
 
     context 'when run with error in jenkins-client setup' do
       before(:each) do
-        @instance.stub(:setup_jenkins_client) { raise Exception }
+        @instance.stub(:add_jenkins_cartridge) { raise Exception }
       end
       it "should print out jenkins warning" do
         run_output.should match("Jenkins client failed to install")
@@ -194,7 +194,7 @@ describe RHC::Commands::App do
       before(:each) do
         @rc = MockRestClient.new
         @domain = @rc.add_domain("mockdomain")
-        @instance.stub(:setup_jenkins_client) { raise RHC::Rest::ServerErrorException.new("Server error", 157) }
+        @instance.stub(:add_jenkins_cartridge) { raise RHC::Rest::ServerErrorException.new("Server error", 157) }
       end
       it "should fail embedding jenkins cartridge" do
         Kernel.should_receive(:sleep).and_return(true)
@@ -338,7 +338,7 @@ describe RHC::Commands::App do
         cart2 = app.add_cartridge('mock_cart-2')
       end
       it { run_output.should match("app1 @ https://app1-mockdomain.fake.foo/") }
-      it { run_output.should match("Scaled x2") }
+      it { run_output.should match(/Scaling:.*x2/) }
     end
   end
 

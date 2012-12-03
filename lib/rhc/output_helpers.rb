@@ -31,20 +31,6 @@ module RHC
     end
 
     #---------------------------
-    # Domain information
-    #---------------------------
-
-    # This is a little different because we don't want to recreate the display_app function
-    def display_domain(domain)
-      say "No domain exists.  You can use 'rhc domain create' to create a namespace for applications." and return unless domain
-      header "Applications in %s" % domain.id do
-        domain.applications.each do |a|
-          display_app(a,a.cartridges,a.scalable_carts.first)
-        end.blank? and say "No applications. You can use 'rhc app create' to create new applications."
-      end
-    end
-
-    #---------------------------
     # Application information
     #---------------------------
     def display_app(app,cartridges = nil)
@@ -83,8 +69,8 @@ module RHC
 
     def format_cart_header(cart)
       [
-        cart.display_name, 
-        cart.name != cart.display_name ? "(#{cart.name})" : nil,
+        cart.name, 
+        cart.name != cart.display_name ? "(#{cart.display_name})" : nil,
       ].compact.join(' ')
     end
 
@@ -114,7 +100,7 @@ module RHC
     def display_no_info(type)
       say_table \
         nil,
-        ["This #{type} has no information to show"]
+        [["This #{type} has no information to show"]]
     end
 
     private
@@ -124,7 +110,7 @@ module RHC
         values = values.to_a if values.is_a? Hash
         values.select! do |arr|
           arr[0] = "#{table_heading(arr.first)}:" if arr[0].is_a? Symbol
-          arr[1].present?
+          !opts[:delete] || arr.last.present?
         end
 
         table = self.table(values)

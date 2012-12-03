@@ -244,6 +244,8 @@ module RHC::Rest::Mock
         type = type[:cartridge]
       end
       a = MockRestApplication.new(name, type, self, scale, gear_profile)
+      builder = @applications.find{ |a| a.cartridges.map(&:name).any?{ |s| s =~ /^jenkins-[\d\.]+$/ } }
+      a.building_app = builder.name if builder
       @applications << a
       a.add_message("Success")
       a

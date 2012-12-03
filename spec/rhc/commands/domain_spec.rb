@@ -93,7 +93,7 @@ describe RHC::Commands::Domain do
       it "should match output" do
         output = run_output
         output.should match("app_no_carts")
-        output.should match(/Cartridges$\n\s+[=]*\s+None/)
+        output.should match(/127.0.0.1\s*$/m)
       end
     end
   end

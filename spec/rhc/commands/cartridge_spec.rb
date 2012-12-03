@@ -293,9 +293,9 @@ describe RHC::Commands::Cartridge do
         domain = @rc.add_domain("mock_domain")
         app = domain.add_application("app1", "mock_type", true)
       end
-      it { run_output.should match('Scaled x2') }
+      it { run_output.should match(/Scaling: .*x2 \(minimum/) }
       it { run_output.should match('minimum: 2') }
-      it { run_output.should match('maximum: available gears') }
+      it { run_output.should match('maximum: available') }
     end
   end
 

@@ -122,31 +122,37 @@ module ClassSpecHelpers
   end
 
   def capture(&block)
+    old_stdout = $stdout
     old_stderr = $stderr
     old_terminal = $terminal
     @input = StringIO.new
     @output = StringIO.new
+    $stdout = @output
     $stderr = (@error = StringIO.new)
     $terminal = MockHighLineTerminal.new @input, @output
     yield
+    @output.string
   ensure
+    $stdout = old_stdout
     $stderr = old_stderr
     $terminal = old_terminal
-    @output.to_s
   end
 
   def capture_all(&block)
+    old_stdout = $stdout
     old_stderr = $stderr
     old_terminal = $terminal
     @input = StringIO.new
     @output = StringIO.new
+    $stdout = @output
     $stderr = @output
     $terminal = MockHighLineTerminal.new @input, @output
     yield
+    @output.string
   ensure
+    $stdout = old_stdout
     $stderr = old_stderr
     $terminal = old_terminal
-    @output.to_s
   end
 
   def run(input=[])
