@@ -17,8 +17,20 @@ module RHC
 
       #Find Key by name
       def find_key(name)
-        #TODO do a regex caomparison
         keys.detect { |key| key.name == name }
+      end
+
+      def add_authorization(scopes, expires_in=nil, note=nil)
+        debug "Adding authorization for #{scopes} up to #{expires_in} with note #{note}"
+        rest_method "ADD_AUTHORIZATION", :scopes => scopes, :note => note, :expires_in => expires_in
+      end
+
+      def list_authorizations
+        rest_method "LIST_AUTHORIZATIONS"
+      end
+
+      def identities
+        @identities ||= (attribute('identities') || [{:uid => login}]).map{ |i| Identity.new(i, self) }
       end
     end
   end

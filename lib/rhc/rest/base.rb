@@ -35,6 +35,10 @@ module RHC
         attributes['links'] || {}
       end
 
+      def supports?(sym)
+        links.has_key?(sym.to_s) || links.has_key?(sym.to_s.upcase)
+      end
+
       protected
         attr_reader :client
 

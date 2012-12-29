@@ -34,6 +34,12 @@ module RHC
         @preferred_api_versions ||= CLIENT_API_VERSIONS
         @debug ||= false
 
+        if options[:token]
+          self.headers[:authorization] = "Bearer #{options.delete(:token)}"
+          options.delete(:user)
+          options.delete(:password)
+        end
+
         @auth = options.delete(:auth)
 
         self.headers.merge!(options.delete(:headers)) if options[:headers]
@@ -157,12 +163,12 @@ module RHC
 
       def cartridges
         debug "Getting all cartridges"
-        api.rest_method("LIST_CARTRIDGES", nil, :lazy_auth => true)
+        @cartridges ||= api.rest_method("LIST_CARTRIDGES", nil, :lazy_auth => true)
       end
 
       def user
         debug "Getting user info"
-        api.rest_method "GET_USER"
+        @user ||= api.rest_method "GET_USER"
       end
 
       def sshkeys
@@ -274,19 +280,15 @@ module RHC
           data = result['data']
           case type
           when 'domains'
-            domains = Array.new
-            data.each do |domain_json|
-              domains.push(Domain.new(domain_json, self))
-            end
-            domains
+            data.map{ |json| Domain.new(json, self) }
           when 'domain'
             Domain.new(data, self)
+          when 'authorization'
+            Authorization.new(data, self)
+          when 'authorizations'
+            data.map{ |json| Authorization.new(json, self) }
           when 'applications'
-            apps = Array.new
-            data.each do |app_json|
-              apps.push(Application.new(app_json, self))
-            end
-            apps
+            data.map{ |json| Application.new(json, self) }
           when 'application'
             app = Application.new(data, self)
             result['messages'].each do |message|
@@ -294,29 +296,17 @@ module RHC
             end
             app
           when 'cartridges'
-            carts = Array.new
-            data.each do |cart_json|
-              carts.push(Cartridge.new(cart_json, self))
-            end
-            carts
+            data.map{ |json| Cartridge.new(json, self) }
           when 'cartridge'
             Cartridge.new(data, self)
           when 'user'
             User.new(data, self)
           when 'keys'
-            keys = Array.new
-            data.each do |key_json|
-              keys.push(Key.new(key_json, self))
-            end
-            keys
+            data.map{ |json| Key.new(json, self) }
           when 'key'
             Key.new(data, self)
           when 'gear_groups'
-            gears = Array.new
-            data.each do |gear_json|
-              gears.push(GearGroup.new(gear_json, self))
-            end
-            gears
+            data.map{ |json| GearGroup.new(json, self) }
           else
             data
           end
@@ -326,7 +316,7 @@ module RHC
           "The server did not respond correctly. This may be an issue "\
           "with the server configuration or with your connection to the "\
           "server (such as a Web proxy or firewall)."\
-          "#{RestClient.proxy.present? ? " Please verify that your proxy server is working correctly (#{RestClient.proxy}) and that you can access the OpenShift server #{url}" : "Please verify that you can access the OpenShift server #{url}"}"
+          "#{RestClient.proxy.present? ? " Please verify that your proxy server is working correctly (#{RestClient.proxy}) and that you can access the OpenShift server #{url}" : " Please verify that you can access the OpenShift server #{url}"}"
         end
 
         def process_error_response(response, url=nil)

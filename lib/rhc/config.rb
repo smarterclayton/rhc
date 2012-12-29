@@ -51,6 +51,7 @@ module RHC
     OPTIONS = {
       :server =>      ['libra_server', nil, 'The OpenShift server to connect to'],
       :rhlogin =>     ['default_rhlogin', nil, 'Your OpenShift login name'],
+      :token =>       ['api_token', nil, 'An authorization token for accessing your account'],
       :password =>    nil,
       :timeout =>     [nil, :integer, 'The default timeout for network operations'],
       :insecure =>    [nil, :boolean, "If true, certificate errors will be ignored.\nWARNING: This may allow others to eavesdrop on your communication with OpenShift."],

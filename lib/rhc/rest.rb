@@ -4,14 +4,16 @@ require 'rest-client'
 module RHC
   module Rest
 
-    autoload :Api, 'rhc/rest/api'
-    autoload :Application, 'rhc/rest/application'
-    autoload :Cartridge,   'rhc/rest/cartridge'
-    autoload :Client,      'rhc/rest/client'
-    autoload :Domain,      'rhc/rest/domain'
-    autoload :Key,         'rhc/rest/key'
-    autoload :User,        'rhc/rest/user'
-    autoload :GearGroup,   'rhc/rest/gear_group'
+    autoload :Api,           'rhc/rest/api'
+    autoload :Application,   'rhc/rest/application'
+    autoload :Authorization, 'rhc/rest/authorization'
+    autoload :Cartridge,     'rhc/rest/cartridge'
+    autoload :Client,        'rhc/rest/client'
+    autoload :Domain,        'rhc/rest/domain'
+    autoload :Key,           'rhc/rest/key'
+    autoload :Identity,      'rhc/rest/identity'
+    autoload :User,          'rhc/rest/user'
+    autoload :GearGroup,     'rhc/rest/gear_group'
 
     class Exception < RuntimeError
       attr_reader :code

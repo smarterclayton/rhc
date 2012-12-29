@@ -59,16 +59,13 @@ module RHC
       include RHC::SSHHelpers
       include RHC::GitHelpers
       attr_reader :config, :options
-      attr_accessor :username, :password
-
-      def openshift_server
-        options.server || config['libra_server'] || "openshift.redhat.com"
-      end
+      attr_accessor :username, :password, :token
 
       def new_client_for_options
         client_from_options({
           :user => username,
           :password => password,
+          :token => options.token,
         })
       end
 
@@ -85,16 +82,18 @@ module RHC
     end
 
     def login_stage
-      paragraph do
-        self.username = if options.rhlogin && options.rhlogin != config.username
-            say "Using #{options.rhlogin} to login to #{openshift_server}"
-            options.rhlogin
-          else
-            ask("Login to #{openshift_server}: ") do |q|
-              q.default = config.username
+      unless options.token
+        paragraph do
+          self.username = if options.rhlogin && options.rhlogin != config.username
+              say "Using #{options.rhlogin} to login to #{openshift_server}"
+              options.rhlogin
+            else
+              ask("Login to #{openshift_server}: ") do |q|
+                q.default = config.username
+              end
             end
-          end
-        self.password = options.password || ask("Password: ") { |q| q.echo = '*' } if @password.nil?
+          self.password = options.password || ask("Password: ") { |q| q.echo = '*' } if @password.nil?
+        end
       end
 
       self.rest_client = new_client_for_options
@@ -118,7 +117,33 @@ module RHC
         end
       end
 
-      rest_client.user
+      if options.token
+        paragraph do 
+          say "Connecting to #{openshift_server} with an API token ... "
+          user = rest_client.user
+          success "as #{user.identities.first.login}"
+        end
+      else
+        user = rest_client.user
+        if user.supports? :add_authorization
+          paragraph do 
+            info "OpenShift can generate a secret key that will allow you to use the command line without entering your password.  The key is stored in your config and should be kept secret.  You can delete the key at any time by running 'rhc forget'."
+            if agree "Generate a key now? (yes|no) "
+              say "Generating an access key for this client ... "
+
+              auth = user.add_authorization('control', 0, "RHC Client on #{hostname}")
+              self.password = nil
+              options.token = auth.token
+              self.rest_client = new_client_for_options
+
+              success "Saved to config"
+
+              user = rest_client.user
+            end
+          end
+        end
+      end
+      true
     end
 
     def create_config_stage
@@ -194,9 +219,8 @@ module RHC
           return nil
         end
 
-        hostname = Socket.gethostname.gsub(/\..*\z/,'')
         userkey = username ? username.gsub(/@.*/, '') : ''
-        pubkey_base_name = "#{userkey}#{hostname}".gsub(/[^A-Za-z0-9]/,'').slice(0,16)
+        pubkey_base_name = "#{userkey}#{hostname.gsub(/\..*\z/,'')}".gsub(/[^A-Za-z0-9]/,'').slice(0,16)
         default_name = find_unique_key_name(
           :keys => @ssh_keys,
           :base => pubkey_base_name,
@@ -429,6 +453,10 @@ EOF
 
     def debug?
       @debug
+    end
+
+    def hostname
+      Socket.gethostname
     end
 
     protected
