@@ -48,7 +48,7 @@ describe RHC::Commands::GitClone do
       context "reports failure" do
         before{ @instance.stub(:git_clone_repo).and_raise(RHC::GitException) }
 
-        it { expect { run }.should exit_with_code(216) }
+        it { expect { run }.should exit_with_code(124) }
         it { run_output.should match("Git returned an error") }
       end
     end

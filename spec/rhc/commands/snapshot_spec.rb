@@ -43,7 +43,7 @@ describe RHC::Commands::Snapshot do
         `(exit 1)`
         Kernel.should_receive(:`).with("ssh #{@ssh_uri.user}@#{@ssh_uri.host} 'snapshot' > #{@app.name}.tar.gz")
       end
-      it { expect { run }.should exit_with_code(130) }
+      it { expect { run }.should exit_with_code(124) }
     end
 
     context 'when saving a snapshot on windows' do
@@ -67,7 +67,7 @@ describe RHC::Commands::Snapshot do
         ssh = mock(Net::SSH)
         Net::SSH.should_receive(:start).with(@ssh_uri.host, @ssh_uri.user).and_raise(Timeout::Error)
       end
-      it { expect { run }.should exit_with_code(130) }
+      it { expect { run }.should exit_with_code(124) }
     end
 
   end
@@ -92,7 +92,7 @@ describe RHC::Commands::Snapshot do
         Kernel.should_receive(:`).with("cat #{@app.name}.tar.gz | ssh #{@ssh_uri.user}@#{@ssh_uri.host} 'restore INCLUDE_GIT'")
         $?.stub(:exitstatus) { 1 }
       end
-      it { expect { run }.should exit_with_code(130) }
+      it { expect { run }.should exit_with_code(124) }
     end
 
     context 'when restoring a snapshot on windows' do
@@ -130,7 +130,7 @@ describe RHC::Commands::Snapshot do
         ssh = mock(Net::SSH)
         Net::SSH.should_receive(:start).with(@ssh_uri.host, @ssh_uri.user).and_raise(Timeout::Error)
       end
-      it { expect { run }.should exit_with_code(130) }
+      it { expect { run }.should exit_with_code(124) }
     end
 
   end
@@ -138,7 +138,7 @@ describe RHC::Commands::Snapshot do
   describe 'snapshot restore file not found' do
     let(:arguments) {['snapshot', 'restore', '--noprompt', '-l', 'test@test.foo', '-p', 'password', '--app', 'mockapp', '-f', 'foo.tar.gz']}
     context 'when restoring a snapshot' do
-      it { expect { run }.should exit_with_code(130) }
+      it { expect { run }.should exit_with_code(124) }
     end
   end
 

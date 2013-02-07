@@ -115,7 +115,7 @@ describe RHC::Commands::Domain do
 
     context 'when there is no domain' do
       it "should not create a domain" do
-        expect { run }.should exit_with_code(127)
+        expect { run }.should exit_with_code(124)
         rest_client.domains.empty?.should be_true
       end
       it { run_output.should match("does not exist") }
@@ -152,7 +152,7 @@ describe RHC::Commands::Domain do
       before{ rest_client.add_domain("dontdelete") }
 
       it "should error out" do
-        expect { run }.should exit_with_code(127)
+        expect { run }.should exit_with_code(124)
         rest_client.domains[0].id.should == 'dontdelete'
       end
       it { run_output.should match("Domain deleteme does not exist") }
@@ -164,7 +164,7 @@ describe RHC::Commands::Domain do
         domain.add_application 'testapp1', 'mock-1.0'
       end
       it "should error out" do
-        expect { run }.should exit_with_code(128)
+        expect { run }.should exit_with_code(124)
         rest_client.domains[0].id.should == 'deleteme'
       end
       it { run_output.should match("Domain contains applications.*?Delete applications first.") }

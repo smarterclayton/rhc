@@ -51,7 +51,7 @@ describe RHC::Commands::PortForward do
         @ssh.should_receive(:exec!).with("rhc-list-ports").and_yield(nil, :stderr, 'permission denied')
       end
       it "should error out as permission denied" do
-        expect { run }.should exit_with_code(129)
+        expect { run }.should exit_with_code(124)
         rest_client.domains[0].id.should == 'mockdomain'
         rest_client.domains[0].applications.size.should == 1
         rest_client.domains[0].applications[0].name.should == 'mockapp'

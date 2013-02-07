@@ -151,7 +151,7 @@ describe RHC::Commands::Cartridge do
         domain = rest_client.add_domain("mock_domain")
         app = domain.add_application("app1", "mock_type")
       end
-      it{ fail_with_code 154 }
+      it{ fail_with_code 124 }
     end
 
     context 'when multiple carts match' do
@@ -161,7 +161,7 @@ describe RHC::Commands::Cartridge do
         app = domain.add_application("app1", "mock_type")
       end
       it {
-        fail_with_code 155
+        fail_with_code 124
       }
     end
   end
@@ -392,7 +392,7 @@ describe RHC::Commands::Cartridge do
 
     context 'when run for a non-existent cartridge' do
       let(:arguments) { cmd_base | ['bogus_cart'] | std_args }
-      it { fail_with_message("There are no cartridges that match 'bogus_cart'.", 154) }
+      it { fail_with_message("There are no cartridges that match 'bogus_cart'.", 124) }
     end
 
     context 'when run with -c flag' do
