@@ -202,6 +202,7 @@ module RHC
       warn "Warning: #{msg}\n" % ['a warning','an error',1]
     end
 
+
     @@indent = 0
     @@last_line_open = false
     def say(msg, *args)

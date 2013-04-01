@@ -384,6 +384,31 @@ describe RHC::Helpers do
     end
   end
 
+  describe "#textwrap_ansi" do
+    it{ "".textwrap_ansi(80).should == [] }
+    it{ "\n".textwrap_ansi(80).should == ["",""] }
+    it{ "a".textwrap_ansi(1).should == ['a'] }
+    it{ "ab".textwrap_ansi(1).should == ['a','b'] }
+    it{ "ab".textwrap_ansi(1).should == ['a','b'] }
+    it{ "ab".textwrap_ansi(2).should == ['ab'] }
+    it{ "a b".textwrap_ansi(1).should == ['a','b'] }
+    it{ "a w b".textwrap_ansi(2).should == ['a','w','b'] }
+    it{ "a w b".textwrap_ansi(3).should == ['a w','b'] }
+    it{ "a\nb".textwrap_ansi(1).should == ['a','b'] }
+    it{ "\e[1m".textwrap_ansi(1).should == ["\e[1m\e[0m"] }
+    it{ "\e[31;1m".textwrap_ansi(1).should == ["\e[31;1m\e[0m"] }
+    it{ "\e[1ma".textwrap_ansi(1).should == ["\e[1ma\e[0m"] }
+    it{ "a\e[12m".textwrap_ansi(1).should == ["a\e[12m\e[0m"] }
+    it{ "a\e[12m\e[34mb".textwrap_ansi(1).should == ["a\e[12m\e[34m\e[0m","b"] }
+    it{ "\e[12;34ma".textwrap_ansi(1).should == ["\e[12;34ma\e[0m"] }
+    it{ "\e[1m\e[1m".textwrap_ansi(1).should == ["\e[1m\e[1m\e[0m"] }
+    it{ "\e[1m \e[1m".textwrap_ansi(1).should == ["\e[1m\e[0m", "\e[1m\e[0m"] }
+  end
+
+  describe "#strip_ansi" do
+    it{ "\e[1m \e[1m".strip_ansi.should == " " }
+  end
+
   context "Resolv helper" do
     let(:resolver) { Object.new }
     let(:existent_host) { 'real_host' }

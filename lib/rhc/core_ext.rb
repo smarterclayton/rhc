@@ -45,6 +45,60 @@ class String
       gsub(/\n+\Z/, '').
       gsub(/\n{3,}/, "\n\n")
   end
+
+  ANSI_ESCAPE_SEQUENCE = /\e\[(\d{1,2}(?:;\d{1,2})*[@-~])/
+
+  #
+  # Split the given string at limit, treating ANSI escape sequences as
+  # zero characters in length.  Will insert an ANSI reset code (\e[0m)
+  # at the end of each line containing an ANSI code, assuming that a
+  # reset was not in the wrapped segment.
+  #
+  # All newlines are preserved.
+  #
+  # Lines longer than limit without natural breaks will be forcibly 
+  # split at the exact limit boundary.
+  #
+  # Returns an Array
+  #
+  def textwrap_ansi(limit)
+    re = /
+      ( # match a sequence of characters up to limit
+        (?:
+          (?:\e\[\d{1,2}(?:;\d{1,2})*[@-~])+  # dont count leading escape sequences
+          .?                                  # special case, escape is present 
+                                              # at end of string
+        |
+          .                                   
+          (?:\e\[\d{1,2}(?:;\d{1,2})*[@-~])*  # dont count trailing escape sequences
+        )
+        {1,#{limit}}
+      )
+      (?:\s+|$)?                              # remove any trailing whitespace
+      /x
+    split("\n",-1).inject([]) do |a, line|
+      if line.length < limit
+        a << line 
+      else
+        line.scan(re) do |segment, other|
+          # short escape sequence matches have whitespace from regex
+          a << segment.strip   
+          # find any escape sequences after the last 0m reset, in order
+          escapes = segment.scan(ANSI_ESCAPE_SEQUENCE).map{ |a| a.first }.reverse.take_while{ |e| e != '0m' }.uniq.reverse
+          if escapes.present?
+            a[-1] << "\e[0m"
+            # TODO: Apply the unclosed sequences to the beginning of the
+            #       next string
+          end
+        end
+      end
+      a
+    end
+  end
+
+  def strip_ansi
+    gsub(ANSI_ESCAPE_SEQUENCE, '')
+  end
 end
 
 unless HTTP::Message.method_defined? :ok?
