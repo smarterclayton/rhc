@@ -66,7 +66,7 @@ class String
       ( # match a sequence of characters up to limit
         (?:
           (?:\e\[\d{1,2}(?:;\d{1,2})*[@-~])+  # dont count leading escape sequences
-          .?                                  # special case, escape is present 
+          .?                                  # special case for escape is present 
                                               # at end of string
         |
           .                                   
@@ -84,7 +84,7 @@ class String
           # short escape sequence matches have whitespace from regex
           a << segment.strip   
           # find any escape sequences after the last 0m reset, in order
-          escapes = segment.scan(ANSI_ESCAPE_SEQUENCE).map{ |a| a.first }.reverse.take_while{ |e| e != '0m' }.uniq.reverse
+          escapes = segment.scan(ANSI_ESCAPE_SEQUENCE).map{ |e| e.first }.reverse.take_while{ |e| e != '0m' }.uniq.reverse
           if escapes.present?
             a[-1] << "\e[0m"
             # TODO: Apply the unclosed sequences to the beginning of the
