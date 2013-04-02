@@ -1,5 +1,4 @@
 require 'rhc'
-require 'highline/system_extensions'
 require 'fileutils'
 require 'socket'
 
