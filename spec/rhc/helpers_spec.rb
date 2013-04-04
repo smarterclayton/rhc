@@ -317,8 +317,8 @@ describe RHC::Helpers do
     it{ "\n".textwrap_ansi(80).should == ["",""] }
     it{ "a".textwrap_ansi(1).should == ['a'] }
     it{ "ab".textwrap_ansi(1).should == ['a','b'] }
-    it{ "ab".textwrap_ansi(1).should == ['a','b'] }
     it{ "ab".textwrap_ansi(2).should == ['ab'] }
+    it{ " ab".textwrap_ansi(2).should == [' a','b'] }
     it{ "a b".textwrap_ansi(1).should == ['a','b'] }
     it{ "a w b".textwrap_ansi(2).should == ['a','w','b'] }
     it{ "a w b".textwrap_ansi(3).should == ['a w','b'] }
@@ -331,6 +331,14 @@ describe RHC::Helpers do
     it{ "\e[12;34ma".textwrap_ansi(1).should == ["\e[12;34ma\e[0m"] }
     it{ "\e[1m\e[1m".textwrap_ansi(1).should == ["\e[1m\e[1m\e[0m"] }
     it{ "\e[1m \e[1m".textwrap_ansi(1).should == ["\e[1m\e[0m", "\e[1m\e[0m"] }
+
+    it{ "ab".textwrap_ansi(1,false).should == ['a','b'] }
+    it{ " abc".textwrap_ansi(3,false).should == [' abc'] }
+    it{ "abcd".textwrap_ansi(3,false).should == ['abcd'] }
+    it{ "abcd\e[1m".textwrap_ansi(3,false).should == ["abcd\e[1m\e[0m"] }
+    it{ "abcd efg a".textwrap_ansi(3,false).should == ['abcd', 'efg', 'a'] }
+    it{ "abcd efgh a".textwrap_ansi(3,false).should == ['abcd', 'efgh', 'a'] }
+    it{ " abcd efg a".textwrap_ansi(3,false).should == [' abcd', 'efg', 'a'] }
   end
 
   describe "#strip_ansi" do

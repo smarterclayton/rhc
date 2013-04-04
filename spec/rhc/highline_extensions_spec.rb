@@ -112,6 +112,29 @@ describe HighLineExtension do
     output.should match "Ant\nidi\nses\ntab\nlis\nhme\nnta\nria\nnis\nm"
   end
 
+  it "should wrap a table based on a max width" do
+    subject.table([["abcd efgh", "12345 67890 a"]], :width => 8).should == [
+      "abcd 12345",
+      "efgh 67890",
+      "     a   "
+    ]
+  end
+
+  it "should not wrap a cells that are too wide based on a max width" do
+    subject.table([["abcdefgh", "1234567890"]], :width => 8).should == [
+      "abcdefgh 1234567890",
+    ]
+  end
+
+  it "should wrap a table based on columns" do
+    subject.table([["abcd", "123"]], :width => [1]).should == [
+      "a 123",
+      "b ",
+      "c ",
+      "d ",
+    ]
+  end
+
   context "sections" do
     let(:tests) { OutputTests.new(subject) }
 

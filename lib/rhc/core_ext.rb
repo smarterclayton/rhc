@@ -46,6 +46,7 @@ class String
   end
 
   ANSI_ESCAPE_SEQUENCE = /\e\[(\d{1,2}(?:;\d{1,2})*[@-~])/
+  ANSI_ESCAPE_MATCH = '\e\[\d+(?:;\d+)*[@-~]'
 
   #
   # Split the given string at limit, treating ANSI escape sequences as
@@ -60,20 +61,45 @@ class String
   #
   # Returns an Array
   #
-  def textwrap_ansi(limit)
-    re = /
+  def textwrap_ansi(limit, breakword=true)
+    re = breakword || limit < 3 ? /
       ( # match a sequence of characters up to limit
         (?:
-          (?:\e\[\d{1,2}(?:;\d{1,2})*[@-~])+  # dont count leading escape sequences
-          .?                                  # special case for escape is present 
-                                              # at end of string
+          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
+          .?                         # string that is only an escape
+                                     # at end of string
         |
           .                                   
-          (?:\e\[\d{1,2}(?:;\d{1,2})*[@-~])*  # dont count trailing escape sequences
+          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
         )
         {1,#{limit}}
       )
-      (?:\s+|$)?                              # remove any trailing whitespace
+      (?:\s+|$)?                     # remove any trailing whitespace
+      /x :
+      /
+      ( # match a sequence of characters up to the last whitespace limit
+        (?:
+          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
+          .?                         # string that is only an escape
+                                     # at end of string
+        |
+          .                                   
+          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
+        )
+        {1,#{limit-1}}\s
+        |
+        (?:
+          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
+          .?                         # string that is only an escape
+                                     # at end of string
+        |
+          .                                   
+          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
+        )+?
+        (\s|$)
+        # match a sequence of characters up to limit
+      )
+      (?:\s+|$)?
       /x
     split("\n",-1).inject([]) do |a, line|
       if line.length < limit
@@ -81,7 +107,7 @@ class String
       else
         line.scan(re) do |segment, other|
           # short escape sequence matches have whitespace from regex
-          a << segment.strip   
+          a << segment.rstrip   
           # find any escape sequences after the last 0m reset, in order
           escapes = segment.scan(ANSI_ESCAPE_SEQUENCE).map{ |e| e.first }.reverse.take_while{ |e| e != '0m' }.uniq.reverse
           if escapes.present?

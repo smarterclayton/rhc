@@ -59,8 +59,32 @@ class HighLineExtension < HighLine
       items.unshift ary.each_with_index {|obj, idx| ary[idx] = sep.to_s * (widths[idx] || 1)}
       items.unshift(opts[:header])
     end
-    items.map do |item|
-      item.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), widths[i], ' ') }.join(join).rstrip
+    if w = opts[:width]
+      allocate = 
+        if w.is_a? Array
+          w[widths.length] = nil
+          w[0,widths.length]
+        else
+          columns = widths.length
+          used = w - join.length * (columns-1)
+          extra = used % columns
+          base = used / columns
+          Array.new(columns){ base + ((used -= 1) >= 0 ? 1 : 0) }
+        end
+
+      fmt = allocate.zip(align).map{ |s, al| "%#{al == :right ? '' : '-'}#{s}s" }.join(join)
+      items.inject([]) do |a,item| 
+        r = item.zip(allocate).map{ |column,w| w ? column.textwrap_ansi(w, false) : [column] }
+        #binding.pry
+        r.map(&:length).max.times do |i|
+          a << fmt % r.map{ |row| row[i] }
+        end
+        a
+      end
+    else
+      items.map do |item|
+        item.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), widths[i], ' ') }.join(join).rstrip
+      end
     end
   end
 
