@@ -47,6 +47,7 @@ class String
 
   ANSI_ESCAPE_SEQUENCE = /\e\[(\d{1,2}(?:;\d{1,2})*[@-~])/
   ANSI_ESCAPE_MATCH = '\e\[\d+(?:;\d+)*[@-~]'
+  CHAR_SKIP_ANSI = "(?:(?:#{ANSI_ESCAPE_MATCH})+.?|.(?:#{ANSI_ESCAPE_MATCH})*)"
 
   #
   # Split the given string at limit, treating ANSI escape sequences as
@@ -62,45 +63,29 @@ class String
   # Returns an Array
   #
   def textwrap_ansi(limit, breakword=true)
-    re = breakword || limit < 3 ? /
-      ( # match a sequence of characters up to limit
-        (?:
-          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
-          .?                         # string that is only an escape
-                                     # at end of string
+    re = breakword ? /
+      ( 
+        # Match substrings that end in whitespace shorter than limit
+        #{CHAR_SKIP_ANSI}{1,#{limit}} # up to limit
+        (?:\s+|$)                     # require the limit to end on whitespace
         |
-          .                                   
-          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
-        )
-        {1,#{limit}}
+        # Match substrings equal to the limit
+        #{CHAR_SKIP_ANSI}{1,#{limit}} 
       )
-      (?:\s+|$)?                     # remove any trailing whitespace
       /x :
       /
-      ( # match a sequence of characters up to the last whitespace limit
-        (?:
-          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
-          .?                         # string that is only an escape
-                                     # at end of string
+      ( 
+        # Match substrings that end in whitespace shorter than limit
+        #{CHAR_SKIP_ANSI}{1,#{limit}}
+        (?:\s|$)                     # require the limit to end on whitespace
         |
-          .                                   
-          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
-        )
-        {1,#{limit-1}}\s
-        |
-        (?:
-          (?:#{ANSI_ESCAPE_MATCH})+  # dont count leading escape sequences
-          .?                         # string that is only an escape
-                                     # at end of string
-        |
-          .                                   
-          (?:#{ANSI_ESCAPE_MATCH})*  # dont count trailing escape sequences
-        )+?
-        (\s|$)
-        # match a sequence of characters up to limit
+        # Match all continguous whitespace strings
+        #{CHAR_SKIP_ANSI}+?
+        (?:\s|$)
+        (?:\s+|$)?
       )
-      (?:\s+|$)?
       /x
+
     split("\n",-1).inject([]) do |a, line|
       if line.length < limit
         a << line 

@@ -11,16 +11,16 @@ class HighLineExtension < HighLine
 
   # OVERRIDE
   def say(msg)
-    separate_blocks
+    if msg.respond_to? :to_str
+      separate_blocks
 
-    Array(msg).each do |statement|
-      statement = statement.to_str
-      next unless statement.present?
+      statement = msg.to_str
+      return statement unless statement.present?
 
       template  = ERB.new(statement, nil, "%")
       statement = template.result(binding)
 
-      statement = wrap(statement) unless @wrap_at.nil?
+      statement = statement.textwrap_ansi(@wrap_at, false).join("#{indentation}\n") unless @wrap_at.nil?
       statement = send(:page_print, statement) unless @page_at.nil?
 
       @output.print(indentation) unless @last_line_open
@@ -32,6 +32,18 @@ class HighLineExtension < HighLine
         else
           @output.puts(statement)
         end
+
+    elsif msg.respond_to? :each
+      separate_blocks
+
+      @output.print if @last_line_open
+      @last_line_open = false
+
+      msg.each do |s|
+        @output.print indentation
+        @output.puts s
+      end
+      @output.flush      
     end
 
     msg
@@ -41,65 +53,19 @@ class HighLineExtension < HighLine
   # be used to print in tabular form.
   def table(items, opts={}, &block)
     items = items.map &block if block_given?
-    widths = []
-    items.each do |item|
-      item.each_with_index do |s, i|
-        item[i] = s.to_s
-        widths[i] = [widths[i] || 0, item[i].length].max
-      end
-    end
-    align = opts[:align] || []
-    join = opts[:join] || ' '
-    if opts[:header]
-      opts[:header].each_with_index do |s, i|
-        widths[i] = [widths[i] || 0, s.length].max
-      end
-      sep = opts[:separator] || "="
-      ary = Array.new(opts[:header].length)
-      items.unshift ary.each_with_index {|obj, idx| ary[idx] = sep.to_s * (widths[idx] || 1)}
-      items.unshift(opts[:header])
-    end
-    if w = opts[:width]
-      allocate = 
-        if w.is_a? Array
-          w[widths.length] = nil
-          w[0,widths.length]
-        else
-          columns = widths.length
-          used = w - join.length * (columns-1)
-          extra = used % columns
-          base = used / columns
-          Array.new(columns){ base + ((used -= 1) >= 0 ? 1 : 0) }
-        end
-
-      fmt = allocate.zip(align).map{ |s, al| "%#{al == :right ? '' : '-'}#{s}s" }.join(join)
-      items.inject([]) do |a,item| 
-        r = item.zip(allocate).map{ |column,w| w ? column.textwrap_ansi(w, false) : [column] }
-        #binding.pry
-        r.map(&:length).max.times do |i|
-          a << fmt % r.map{ |row| row[i] }
-        end
-        a
-      end
-    else
-      items.map do |item|
-        item.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), widths[i], ' ') }.join(join).rstrip
-      end
-    end
+    opts[:width] ||= default_max_width
+    Table.new(items, opts)
   end
 
+  def default_max_width
+    @wrap_at ? @wrap_at - indentation.length : nil
+  end
 
   def header(str,opts = {}, &block)
-    str = underline(str)
-    str = str.map{ |s| color(s, opts[:color]) } if opts[:color]
-    say str
+    say Header.new(str, default_max_width, '  ')
     if block_given?
       indent &block
     end
-  end
-
-  def underline(s)
-    [s, "-"*s.length]
   end
 
   #:nocov:
@@ -184,79 +150,6 @@ class HighLineExtension < HighLine
     section(:top => 1, :bottom => 1, &block)
   end
 
-  # Some versions of highline get in an infinite loop when trying to wrap.
-  # Fixes BZ 866530.
-  # OVERRIDE
-  def wrap_line(line)
-    wrapped_line = []
-    i = chars_in_line = 0
-    word = []
-
-    while i < line.length
-      # we have to give a length to the index because ruby 1.8 returns the
-      # byte code when using a single fixednum index
-      c = line[i, 1]
-      color_code = nil
-      # escape character probably means color code, let's check
-      if c == "\e"
-        color_code = line[i..i+6].match(/\e\[\d{1,2}m/)
-        if color_code
-          # first the existing word buffer then the color code
-          wrapped_line << word.join.wrap(@wrap_at) << color_code[0]
-          word.clear
-
-          i += color_code[0].length
-        end
-      end
-
-      # visible character
-      if !color_code
-        chars_in_line += 1
-        word << c
-
-        # time to wrap the line?
-        if chars_in_line == @wrap_at
-          if c == ' ' or line[i+1, 1] == ' ' or word.length == @wrap_at
-            wrapped_line << word.join
-            word.clear
-          end
-
-          wrapped_line[-1].rstrip!
-          wrapped_line << "\n"
-
-          # consume any spaces at the begining of the next line
-          word = word.join.lstrip.split(//)
-          chars_in_line = word.length
-
-          if line[i+1, 1] == ' '
-            i += 1 while line[i+1, 1] == ' '
-          end
-
-        else
-          if c == ' '
-            wrapped_line << word.join
-            word.clear
-          end
-        end
-
-        i += 1
-      end
-    end
-
-    wrapped_line << word.join
-    wrapped_line.join
-  end
-
-  def wrap(text)
-    wrapped_text = []
-    lines = text.split(/\r?\n/)
-    lines.each_with_index do |line, i|
-      wrapped_text << wrap_line(i == lines.length - 1 ? line : line.rstrip)
-    end
-
-    wrapped_text.join("\n")
-  end
-
   private
     def separate_blocks
       if (@margin ||= 0) > 0 && !@last_line_open
@@ -266,4 +159,208 @@ class HighLineExtension < HighLine
     end
 end
 
+#
+# An element capable of being split into multiple logical rows
+#
+module RowBased
+  def each_line(&block)
+    rows.each(&block)
+  end
+  alias_method :each, :each_line
+
+  def to_a
+    rows
+  end
+end
+
+class HighLine::Header < Struct.new(:text, :width, :indent)
+  include RowBased
+
+  protected
+    def rows
+      @rows ||= begin
+        if !width || width == 0
+          [text.is_a?(Array) ? text.join(' ') : text]
+
+        elsif text.is_a? Array
+          widths = text.map{ |s| s.strip_ansi.length }
+          chars, join, indented = 0, 1, (indent || '').length
+          narrow = width - indented
+          text.zip(widths).inject([]) do |rows, (section, w)|
+            if rows.empty?
+              if w > width
+                rows.concat(section.textwrap_ansi(width))
+              else
+                rows << section
+                chars += w
+              end
+            else
+              if w + chars + join > narrow
+                rows.concat(section.textwrap_ansi(narrow).map{ |s| "#{indent}#{s}" })
+                chars = 0
+              elsif chars == 0
+                rows << "#{indent}#{section}"
+                chars += w + indented
+              else
+                rows[-1] << " #{section}"
+                chars += w + join
+              end
+            end
+            rows
+          end
+        else
+          text.textwrap_ansi(width)
+        end
+      end.tap do |rows|
+        rows << '-' * rows.map{ |s| s.strip_ansi.length }.max
+      end
+    end
+end
+
+#
+# Represent a columnar layout of items with wrapping and flexible layout.
+# 
+class HighLine::Table
+  include RowBased
+
+  def initialize(items=nil,options={},&mapper)
+    @items, @options, @mapper = items, options, mapper
+  end
+
+  protected 
+    attr_reader :items
+
+    def opts
+      @options
+    end
+
+    def align
+      opts[:align] || []
+    end
+    def join
+      opts[:join] || ' '
+    end
+    def indent
+      opts[:indent] || ''
+    end
+    def heading
+      @heading ||= opts[:heading] ? HighLine::Header.new(opts[:heading], calculated_width, indent) : nil
+    end
+
+    def source_rows
+      @source_rows ||= begin
+        (@mapper ? (items.map &@mapper) : items).each do |row|
+          row.map!{ |col| col.is_a?(String) ? col : col.to_s }
+        end
+      end
+    end
+
+    def headers
+      @headers ||= opts[:header] ? [Array(opts[:header])] : []
+    end
+
+    def columns
+      @columns ||= source_rows.map(&:length).max
+    end
+
+    def column_widths
+      @column_widths ||= begin
+        widths = Array.new(columns){ Width.new(0,0,0) }
+        (source_rows + headers).each do |row|
+          row.each_with_index do |col, i|
+            w = widths[i]
+            s = col.strip_ansi
+            word_length = s.scan(/\b\S+/).inject(0){ |l, s| l = s.length if l <= s.length; l }
+            w.min = word_length unless w.min > word_length
+            w.max = s.length unless w.max > s.length
+          end
+        end
+        widths
+      end
+    end
+
+    Width = Struct.new(:min, :max, :set)
+
+    def allocate_widths_for(available)
+      available -= (columns-1) * join.length + indent.length
+      return column_widths.map(&:max) if available >= column_widths.inject(0){ |sum, w| sum + w.max } || column_widths.inject(0){ |sum, w| sum + w.min } > available
+
+      fair = available / columns
+      column_widths.each do |w| 
+        w.set = if w.max <= fair
+            available -= w.max
+            w.max
+          else
+            0
+          end
+      end
+
+      remaining = column_widths.inject(0){ |sum, w| if w.set == 0; sum += w.max; available -= w.min; end; sum }
+      fair = available.to_f / remaining.to_f
+
+      column_widths.
+        each do |w| 
+          if w.set == 0
+            available -= (alloc = (w.max * fair).to_i)
+            w.set = alloc + w.min
+          end
+        end.
+        each{ |w| if available > 0; w.set += 1; available -= 1; end }.
+        map(&:set)
+    end
+
+    def widths
+      if @widths.nil?
+        @widths ||= begin
+          case w = opts[:width]
+          when Array
+            w[w.length] = nil
+            w[0,w.length]
+          when Integer
+            allocate_widths_for(w)
+          else
+            false
+          end
+        end
+      else
+        @widths
+      end
+    end
+
+    def calculated_width
+      @calculated_width ||= widths ? widths.inject(0){ |sum,x| sum + x } + (columns-1) * join.length + indent.length : 0
+    end
+
+    def header_rows
+      @header_rows ||= begin
+        headers << column_widths.map{ |w| '-' * (w.set > 0 ? w.set : w.max) } if headers.present?
+        headers
+      end
+    end
+
+    def rows
+      @rows ||= begin
+        body = if widths
+          fmt = "#{indent}#{widths.zip(align).map{ |w, al| "%#{al == :right ? '' : '-'}#{w}s" }.join(join)}"
+          
+          (header_rows + source_rows).inject([]) do |a,row| 
+            row = row.zip(widths).map{ |column,w| w ? column.textwrap_ansi(w, false) : [column] }
+            row.map(&:length).max.times do |i|
+              a << (fmt % row.map{ |r| r[i] }).rstrip
+            end
+            a
+          end
+        else
+          (header_rows + source_rows).map do |row|
+            "#{indent}#{row.each_with_index.map{ |s,i| s.send((align[i] == :right ? :rjust : :ljust), column_widths[i].max, ' ') }.join(join).rstrip}"
+          end
+        end
+        
+        body = heading.to_a.concat(body) if heading
+        body
+      end
+    end
+end
+
 $terminal = HighLineExtension.new
+$terminal.indent_size = 2

@@ -76,7 +76,7 @@ describe RHC::Helpers do
   it("should draw a table") do
     subject.table([[10,2], [3,40]]) do |i|
       i.map(&:to_s)
-    end.should == ['10 2','3  40']
+    end.to_a.should == ['10 2','3  40']
   end
 
   context "error output" do
@@ -86,7 +86,7 @@ describe RHC::Helpers do
   end
 
   it("should output a table") do
-    subject.send(:display_no_info, 'test').should == ['This test has no information to show']
+    subject.send(:format_no_info, 'test').to_a.should == ['This test has no information to show']
   end
 
   it "should parse an RFC3339 date" do
@@ -312,12 +312,17 @@ describe RHC::Helpers do
     end
   end
 
+  describe "#wrap" do
+    it{ "abc".wrap(1).should == "a\nb\nc" }
+  end
+
   describe "#textwrap_ansi" do
     it{ "".textwrap_ansi(80).should == [] }
     it{ "\n".textwrap_ansi(80).should == ["",""] }
     it{ "a".textwrap_ansi(1).should == ['a'] }
     it{ "ab".textwrap_ansi(1).should == ['a','b'] }
     it{ "ab".textwrap_ansi(2).should == ['ab'] }
+    it{ "ab cd".textwrap_ansi(4).should == ['ab', 'cd'] }
     it{ " ab".textwrap_ansi(2).should == [' a','b'] }
     it{ "a b".textwrap_ansi(1).should == ['a','b'] }
     it{ "a w b".textwrap_ansi(2).should == ['a','w','b'] }
@@ -332,11 +337,12 @@ describe RHC::Helpers do
     it{ "\e[1m\e[1m".textwrap_ansi(1).should == ["\e[1m\e[1m\e[0m"] }
     it{ "\e[1m \e[1m".textwrap_ansi(1).should == ["\e[1m\e[0m", "\e[1m\e[0m"] }
 
-    it{ "ab".textwrap_ansi(1,false).should == ['a','b'] }
+    it{ "ab".textwrap_ansi(1,false).should == ['ab'] }
     it{ " abc".textwrap_ansi(3,false).should == [' abc'] }
     it{ "abcd".textwrap_ansi(3,false).should == ['abcd'] }
     it{ "abcd\e[1m".textwrap_ansi(3,false).should == ["abcd\e[1m\e[0m"] }
     it{ "abcd efg a".textwrap_ansi(3,false).should == ['abcd', 'efg', 'a'] }
+    it('next line'){ "abcd e a".textwrap_ansi(5,false).should == ['abcd', 'e a'] }
     it{ "abcd efgh a".textwrap_ansi(3,false).should == ['abcd', 'efgh', 'a'] }
     it{ " abcd efg a".textwrap_ansi(3,false).should == [' abcd', 'efg', 'a'] }
   end
