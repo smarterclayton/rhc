@@ -5,7 +5,7 @@ module RHC
     class Application < Base
       include Membership
 
-      define_attr :domain_id, :name, :creation_time, :uuid,
+      define_attr :domain_id, :name, :creation_time, :id,
                   :git_url, :app_url, :gear_profile, :framework,
                   :scalable, :health_check_path, :embedded, :gear_count,
                   :ssh_url, :building_app, :cartridges, :initial_git_url
@@ -17,8 +17,9 @@ module RHC
       end
 
       def id
-        attributes['id'] || uuid
+        attributes['id'] || attributes['uuid']
       end
+      alias_method :uuid, :id
 
       def domain
         domain_id

@@ -32,7 +32,7 @@ describe "rhc core scenarios" do
       r = rhc :account
       r.stdout.should match "on #{ENV['RHC_SERVER']}"
       r.stdout.should match 'Gears'
-      r.stdout.should match 'Plan'
+      r.stdout.should match 'Domains Allowed'
     end
 
     it "starts the wizard on default invocation" do
